@@ -12,5 +12,11 @@ pre-commit = "*"
 loguru = "*"
 colorama = "*"
 
+[scripts]
+start = "pipenv run start"
+lint = "pre-commit run --all-files"
+precommit = "pre-commit install"
+
+
 [requires]
 python_version = "3.8"
