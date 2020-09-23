@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+
+# Tests cache
+.pytest_cache/
+
+# Vscode settings
+.vscode/
+
+# Ignore enviromental vars in `db.env` and `.env` files (contains private information and database authentication data)
+*.env
+
+# Ignore intellij Files
+.idea
+
+# Ignore spyder Files
+.spyproject/
+
+# Ignore ds store files
+.DS_STORE
+
+# Ignore databases
+*.sqlite3
+*.db
+
+# Ignore logs
+logs/*
