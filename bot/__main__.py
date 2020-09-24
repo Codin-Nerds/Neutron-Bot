@@ -26,13 +26,15 @@ extensions = [
     "bot.cogs.moderation",
 
     "bot.cogs.owner",
+
+    "bot.cogs.search",
 ]
 
 
 bot = Bot(
     extensions,
     command_prefix=PREFIX,
-    activity=Game(name=f"Ping me using {PREFIX}help"),
+    activity=Game(name=f"Electron v1 | {PREFIX}help"),
     case_insensitive=True,
 )
 

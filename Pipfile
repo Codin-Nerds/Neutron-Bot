@@ -12,6 +12,7 @@ loguru = "*"
 colorama = "*"
 python-dateutil = "*"
 "discord.py" = "*"
+html2text = "*"
 
 [scripts]
 start = "python -m bot"
