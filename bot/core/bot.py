@@ -9,11 +9,10 @@ class Bot(Base_Bot):
     def __init__(self, extensions: list, *args, **kwargs) -> None:
         """Initialize the subclass."""
         super().__init__(*args, **kwargs)
+        self.session = aiohttp.ClientSession()
+
         self.extension_list = extensions
         self.first_on_ready = True
-
-        self.log_channel = None
-        self.session = aiohttp.ClientSession()
 
     async def on_ready(self) -> None:
         """Initialize some stuff once the bot is ready."""
