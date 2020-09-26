@@ -1,5 +1,10 @@
-# Python cache
+# Ignore python cache
 __pycache__/
+
+# virtualenv
+env/
+venv/
+.venv
 
 # Tests cache
 .pytest_cache/
@@ -10,7 +15,7 @@ __pycache__/
 # Ignore enviromental vars in `db.env` and `.env` files (contains private information and database authentication data)
 *.env
 
-# Ignore intellij Files
+# Ignore intellij Files (PyCharm)
 .idea
 
 # Ignore spyder Files
@@ -19,9 +24,19 @@ __pycache__/
 # Ignore ds store files
 .DS_STORE
 
-# Ignore databases
-*.sqlite3
-*.db
+# Ignore coverage reports
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+htmlcov/
+
 
 # Ignore logs
 logs/*
+
+# Backup files
+*.bak
+
+# Personal TODO files
+TODO
