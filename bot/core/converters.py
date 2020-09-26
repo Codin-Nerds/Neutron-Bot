@@ -1,21 +1,13 @@
 import re
 import typing as t
 from ast import literal_eval
-# from contextlib import suppress
-
-# from discord import Member, User
-from discord.ext.commands import (
-    BadArgument,
-    Context,
-    Converter,
-    # MemberConverter,
-    # MemberNotFound,
-    # NotFound,
-    # UserConverter,
-    # UserNotFound
-)
 
 from dateutil.relativedelta import relativedelta
+# from discord import Member, User
+from discord.ext.commands import (  # MemberConverter,; MemberNotFound,; NotFound,; UserConverter,; UserNotFound
+    BadArgument, Context, Converter)
+
+# from contextlib import suppress
 
 
 def _obtain_user_id(argument: str) -> t.Optional[int]:

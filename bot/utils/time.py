@@ -1,6 +1,7 @@
-from dateutil.relativedelta import relativedelta
-from datetime import datetime
 import typing as t
+from datetime import datetime
+
+from dateutil.relativedelta import relativedelta
 
 
 def stringify_timedelta(time_delta: relativedelta, min_unit: str = "seconds") -> str:

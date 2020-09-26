@@ -1,7 +1,5 @@
 import aiohttp
-
 from discord.ext.commands import AutoShardedBot as Base_Bot
-
 from loguru import logger
 
 

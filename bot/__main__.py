@@ -1,14 +1,11 @@
 import os
 
-from bot import config
-from bot.core.bot import Bot
-
-from bot.core.exceptions import TokenNotFoundError
-
+import colorama
 from discord import Game
 
-import colorama
-
+from bot import config
+from bot.core.bot import Bot
+from bot.core.exceptions import TokenNotFoundError
 
 TOKEN = os.getenv("BOT_TOKEN")
 PREFIX = config.COMMAND_PREFIX
