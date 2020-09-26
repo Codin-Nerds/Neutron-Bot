@@ -14,6 +14,12 @@ class Bot(Base_Bot):
         self.extension_list = extensions
         self.first_on_ready = True
 
+    def run(self, token: str) -> None:
+        if not token:
+            logger.error("Missing Bot Token!")
+        else:
+            super().run(token)
+
     async def on_ready(self) -> None:
         """Initialize some stuff once the bot is ready."""
         if self.first_on_ready:

@@ -22,12 +22,4 @@ bot = Bot(
 
 
 if __name__ == "__main__":
-    if not TOKEN:
-        raise RuntimeError(
-            """
-            Bot token missing, make sure your `.env` file contains
-            BOT_TOKEN key and you're using pipenv to set these.
-            """
-        )
-
     bot.run(TOKEN)
