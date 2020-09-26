@@ -14,18 +14,7 @@ TOKEN = os.getenv("BOT_TOKEN")
 PREFIX = config.COMMAND_PREFIX
 
 extensions = [
-    "bot.cogs.common",
-
-    "bot.cogs.fun",
-
-    "bot.cogs.games",
-    "bot.cogs.gamestats",
-
-    "bot.cogs.info",
-
-    "bot.cogs.moderation",
-
-    "bot.cogs.owner",
+    # "bot.cogs.example",
 ]
 
 
