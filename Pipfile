@@ -13,7 +13,6 @@ pre-commit = "~=2.7.1"
 
 [packages]
 loguru = "~=0.5.3"
-colorama = "~=0.4.3"
 python-dateutil = "~=2.8.1"
 "discord.py" = "~=1.4.1"
 
