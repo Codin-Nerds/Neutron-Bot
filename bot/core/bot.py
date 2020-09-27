@@ -14,7 +14,6 @@ class Bot(Base_Bot):
     def __init__(self, extensions: list, *args, **kwargs) -> None:
         """Initialize the subclass."""
         super().__init__(*args, **kwargs)
-        self.session = aiohttp.ClientSession()
 
         self.extension_list = extensions
         self.initial_call = True
@@ -50,10 +49,25 @@ class Bot(Base_Bot):
             logger.info("Bot connection reinitialized")
 
     def run(self, token: str) -> None:
+        """Override the default `run` method and add a missing token check"""
         if not token:
             logger.error("Missing Bot Token!")
         else:
             super().run(token)
+
+    async def start(self, *args, **kwargs) -> None:
+        """
+        Estabolish a connection to asyncpg database and aiohttp session.
+
+        Overwriting `start` method is needed in order to only make a connection
+        after the bot itself has been initiated.
+
+        Setting these on `__init__` directly would mean in case the bot fails to run
+        it won't be easy to close the connection.
+        """
+        self.session = aiohttp.ClientSession()
+        await self.db_connect()
+        await super().start(*args, **kwargs)
 
     async def close(self) -> None:
         """Close the bot and do some cleanup."""
