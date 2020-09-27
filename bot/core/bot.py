@@ -1,7 +1,5 @@
 import aiohttp
-
 from discord.ext.commands import AutoShardedBot as Base_Bot
-
 from loguru import logger
 
 
@@ -11,11 +9,16 @@ class Bot(Base_Bot):
     def __init__(self, extensions: list, *args, **kwargs) -> None:
         """Initialize the subclass."""
         super().__init__(*args, **kwargs)
+        self.session = aiohttp.ClientSession()
+
         self.extension_list = extensions
         self.first_on_ready = True
 
-        self.log_channel = None
-        self.session = aiohttp.ClientSession()
+    def run(self, token: str) -> None:
+        if not token:
+            logger.error("Missing Bot Token!")
+        else:
+            super().run(token)
 
     async def on_ready(self) -> None:
         """Initialize some stuff once the bot is ready."""

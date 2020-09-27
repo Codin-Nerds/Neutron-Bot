@@ -1,38 +1,48 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report an issue with the bot.
 title: ''
 labels: ''
 assignees: ''
-
 ---
 
-**Describe the bug**
+## Describe the bug
+
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+## Steps To Reproduce
+
 Steps to reproduce the behavior:
+
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
 
-**Expected behavior**
+## Expected behavior
+
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
+## Screenshots
+
 If applicable, add screenshots to help explain your problem.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+## Further bot specific data (Remove this if you aren't running the bot yourself)
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+- OS and version [f.e.: Arch Linux (kernel: 5.8.10.arch1-1) / Windows (version: 1809)]
+- Bot version / Commit ID [f.e.: Release v0.1 / Commit f64137277ae77d7ab23753de874cc77a124b6adb]
 
-**Additional context**
-Add any other context about the problem here.
+<details>
+
+<summary>
+Output log at TRACE logging level
+</summary>
+
+<p>
+
+```log
+[Log output here]
+```
+
+</p>
+</details>
