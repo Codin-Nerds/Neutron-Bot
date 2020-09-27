@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 
 import aiohttp
 from discord.ext.commands import AutoShardedBot as Base_Bot
@@ -9,12 +10,14 @@ from bot.core.database import Database
 
 
 class Bot(Base_Bot):
-    """Subclassed Hotwired bot."""
+    """Subclassed Neutron bot."""
 
     def __init__(self, extensions: list, *args, **kwargs) -> None:
         """Initialize the subclass."""
         super().__init__(*args, **kwargs)
         self.session = aiohttp.ClientSession()
+
+        self.start_time = datetime.utcnow()
 
         self.extension_list = extensions
         self.initial_call = True
