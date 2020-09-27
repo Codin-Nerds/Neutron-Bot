@@ -23,6 +23,14 @@ If you want to run this bot on your own, you can simply follow this guide:
 6. Go to **OAuth2** and click bot, than add **Administrator** permissions
 7. You can follow the link that will appear to add the bot to your discord server
 
+### Setting up postgresql database
+
+In order to prevent cluttering the README too much,
+here's a link to official documentation regarding installation:
+[Official PostgreSQL installation tutorial](https://www.tutorialspoint.com/postgresql/postgresql_environment.htm)
+Note that the installation steps will differ depending on your operating system.
+Make sure to only follow the installation steps specific to your operating system.
+
 ### Running bot
 
 1. Clone the repository (or fork it if you want to make changes)
