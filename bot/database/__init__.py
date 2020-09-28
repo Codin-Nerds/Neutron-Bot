@@ -21,8 +21,9 @@ class Singleton(type):
 
 
 class DBTable(metaclass=Singleton):
-    def __init__(self, db: "Database"):
+    def __init__(self, db: "Database", table_name: str):
         self.database = db
+        self.table = table_name
         self.pool = self.database.pool
         self.timeout = self.database.timeout
 
@@ -42,6 +43,55 @@ class DBTable(metaclass=Singleton):
     @classmethod
     def reference(cls) -> "DBTable":
         return cls._instance
+
+    async def db_execute(self, sql: str, sql_args: t.Optional[list] = None) -> None:
+        if not sql_args:
+            sql_args = []
+
+        async with self.pool.acquire(timeout=self.timeout) as db:
+            await db.execute(sql, *sql_args)
+
+    async def db_fetch(self, sql: str, sql_args: t.Optional[list] = None) -> asyncpg.Record:
+        if not sql_args:
+            sql_args = []
+
+        async with self.pool.acquire(timeout=self.timeout) as db:
+            return await db.fetchrow(sql, *sql_args)
+
+    async def db_get(self, column: str, specification: t.Optional[str] = None, sql_args: t.Optional[list] = None) -> asyncpg.Record:
+        sql = f"SELECT {column} FROM {self.table}"
+        if specification:
+            sql += f" WHERE {specification}"
+
+        await self.db_fetch(sql, sql_args)
+
+    async def db_set(self, columns: t.List[str], values: t.List[str]) -> None:
+        sql_columns = ", ".join(columns)
+        sql_values = ", ".join(f"${n + 1}" for n in range(len(values)))
+
+        sql = f"""
+        INSERT INTO {self.table} ({sql_columns})
+        VALUES ({sql_values})
+        """
+
+        await self.db_execute(sql, values)
+
+    async def db_upsert(self, columns: t.List[str], values: t.List[str], conflict_column: str) -> None:
+        sql_columns = ", ".join(columns)
+        sql_values = ", ".join(f"${n + 1}" for n in range(len(values)))
+        sql_update = ""
+        for index, column in enumerate(columns):
+            if column != conflict_column:
+                sql_update += f"{column}=${index}"
+
+        sql = f"""
+        INSERT INTO {self.table} ({sql_columns})
+        VALUES ({sql_values})
+        ON CONFLICT ({conflict_column}) DO
+        UPDATE SET {sql_update}
+        """
+
+        await self.db_execute(sql, values)
 
 
 class Database(metaclass=Singleton):
@@ -78,7 +128,7 @@ class Database(metaclass=Singleton):
         logger.debug("Closing connection to the database")
         await self.pool.close()
 
-    async def add_tables(self, tables: t.List[str], bot: Bot) -> None:
+    async def add_tables(self, tables: t.List[str], bot: "Bot") -> None:
         for table in tables:
             logger.trace(f"Adding {table} table")
             module = import_module(table)
