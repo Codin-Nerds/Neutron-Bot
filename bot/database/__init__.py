@@ -102,4 +102,5 @@ class Database(metaclass=Singleton):
             logger.warning(f"Tried to remove unknown table ({table.__class__})")
 
         logger.trace(f"Removing {table.__class__}")
-        self.table.remove(table)
+        self.tables.remove(table)
+        table._instance = None
