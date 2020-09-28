@@ -39,6 +39,10 @@ class DBTable(metaclass=Singleton):
         async with self.pool.acquire(timeout=self.timeout) as db:
             await db.execute(self.populate_command)
 
+    @classmethod
+    def reference(cls) -> "DBTable":
+        return cls._instance
+
 
 class Database(metaclass=Singleton):
     def __init__(
