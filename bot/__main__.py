@@ -12,7 +12,7 @@ extensions = [
     # "bot.cogs.example",
 ]
 db_tables = [
-    # "bot.database.example"
+    "bot.database.roles"
 ]
 
 
