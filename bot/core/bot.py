@@ -76,6 +76,6 @@ class Bot(Base_Bot):
         logger.info("Closing bot connection")
         if hasattr(self, "session"):
             await self.session.close()
-        if hasattr(self, "database"):
+        if hasattr(self, "database") and hasattr(self.database, "pool"):
             await self.database.disconnect()
         await super().close()

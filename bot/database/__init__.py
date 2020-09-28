@@ -124,7 +124,7 @@ class Database(metaclass=Singleton):
 
         return True
 
-    async def disconnect(self) -> bool:
+    async def disconnect(self) -> None:
         logger.debug("Closing connection to the database")
         await self.pool.close()
 
