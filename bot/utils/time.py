@@ -1,23 +1,38 @@
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
 
 
-def stringify_timedelta(time_delta: relativedelta, min_unit: str = "seconds") -> str:
+def stringify_reldelta(rel_delta: relativedelta, min_unit: str = "seconds") -> str:
     """
     Convert `dateutil.relativedelta.relativedelta` into a readable string
-    `min_unit` is used to specify the printed precision
+
+    `min_unit` is used to specify the printed precision,
+    aviable precision levels are:
+    * `years`
+    * `months`
+    * `weeks`
+    * `days`
+    * `hours`
+    * `minutes`
+    * `seconds`
+    * `microseconds`
+    These let you determine which unit will be the last one,
+    for example with precision of `days` from:
+    `1 year 2 months 2 weeks 5 days 4 hours 2 minutes and 1 second`
+    you'd get:
+    `1 year 2 months 2 weeks and 5 days`
     """
     time_dict = {
-        "years": time_delta.years,
-        "months": time_delta.months,
-        "weeks": time_delta.weeks,
-        "days": time_delta.days,
-        "hours": time_delta.hours,
-        "minutes": time_delta.minutes,
-        "seconds": time_delta.seconds,
-        "microseconds": time_delta.microseconds,
+        "years": rel_delta.years,
+        "months": rel_delta.months,
+        "weeks": rel_delta.weeks,
+        "days": rel_delta.days,
+        "hours": rel_delta.hours,
+        "minutes": rel_delta.minutes,
+        "seconds": rel_delta.seconds,
+        "microseconds": rel_delta.microseconds,
     }
 
     stringified_time = ""
@@ -41,15 +56,54 @@ def stringify_timedelta(time_delta: relativedelta, min_unit: str = "seconds") ->
     return stringified_time
 
 
-def time_elapsed(_from: datetime, to: t.Optional[datetime] = None) -> str:
+def stringify_timedelta(time_delta: timedelta, min_unit: str = "seconds") -> str:
+    """
+    Convert `datetime.timedelta` into a readable string
+
+    `min_unit` is used to specify the printed precision,
+    aviable precision levels are:
+    * `years`
+    * `months`
+    * `weeks`
+    * `days`
+    * `hours`
+    * `minutes`
+    * `seconds`
+    * `microseconds`
+    These let you determine which unit will be the last one,
+    for example with precision of `days` from:
+    `1 year 2 months 2 weeks 5 days 4 hours 2 minutes and 1 second`
+    you'd get:
+    `1 year 2 months 2 weeks and 5 days`
+    """
+    rel_delta = relativedelta(microseconds=time_delta.total_seconds() * 1000000)
+    return stringify_reldelta(rel_delta, min_unit=min_unit)
+
+
+def time_elapsed(_from: datetime, to: t.Optional[datetime] = None, min_unit: str = "seconds") -> str:
     """
     Returns how much time has elapsed in a readable string
     when no `to` value is specified, current time is assumed
+
+    `min_unit` is used to specify the printed precision,
+    aviable precision levels are:
+    * `years`
+    * `months`
+    * `weeks`
+    * `days`
+    * `hours`
+    * `minutes`
+    * `seconds`
+    * `microseconds`
+    These let you determine which unit will be the last one,
+    for example with precision of `days` from:
+    `1 year 2 months 2 weeks 5 days 4 hours 2 minutes and 1 second ago`
+    you'd get:
+    `1 year 2 months 2 weeks and 5 days ago`
     """
     if not to:
         to = datetime.datetime.utcnow()
 
-    delta = abs(to - _from)
-    rel_delta = relativedelta.seconds = delta.total_seconds
-    stringified_time = stringify_timedelta(rel_delta)
+    rel_delta = relativedelta(to, _from)
+    stringified_time = stringify_reldelta(rel_delta, min_unit=min_unit)
     return f"{stringified_time} ago."
