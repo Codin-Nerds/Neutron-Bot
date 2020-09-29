@@ -1,6 +1,5 @@
 from textwrap import dedent
 
-import asyncpg
 from discord import Guild, Role
 from loguru import logger
 
@@ -39,7 +38,7 @@ class Roles(DBTable):
             conflict_column="serverid"
         )
 
-    async def _get_role(self, role_name: str, guild: Guild) -> asyncpg.Record:
+    async def _get_role(self, role_name: str, guild: Guild) -> Role:
         """Get a `role_name` column for specific `guild`."""
         logger.trace(f"Obtaining {role_name} role from {guild.id}")
         record = await self.db_get(
@@ -59,13 +58,13 @@ class Roles(DBTable):
     async def set_staff_role(self, guild: Guild, role: Role) -> None:
         await self._set_role("staff", guild, role)
 
-    async def get_default_role(self, guild: Guild) -> asyncpg.Record:
+    async def get_default_role(self, guild: Guild) -> Role:
         return await self._get_role("_default", guild)
 
-    async def get_muted_role(self, guild: Guild) -> asyncpg.Record:
+    async def get_muted_role(self, guild: Guild) -> Role:
         return await self._get_role("muted", guild)
 
-    async def get_staff_role(self, guild: Guild) -> asyncpg.Record:
+    async def get_staff_role(self, guild: Guild) -> Role:
         return await self._get_role("staff", guild)
 
 
