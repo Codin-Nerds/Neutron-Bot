@@ -41,7 +41,7 @@ def stringify_timedelta(time_delta: relativedelta, min_unit: str = "seconds") ->
     return stringified_time
 
 
-def time_elapsed(_from: datetime, to: t.Optional[datetime] = None) -> str:
+def time_elapsed(_from: datetime, to: t.Optional[datetime] = None, min_unit: str = "seconds") -> str:
     """
     Returns how much time has elapsed in a readable string
     when no `to` value is specified, current time is assumed
@@ -51,5 +51,5 @@ def time_elapsed(_from: datetime, to: t.Optional[datetime] = None) -> str:
 
     delta = abs(to - _from)
     rel_delta = relativedelta.seconds = delta.total_seconds
-    stringified_time = stringify_timedelta(rel_delta)
+    stringified_time = stringify_timedelta(rel_delta, min_unit=min_unit)
     return f"{stringified_time} ago."
