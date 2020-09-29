@@ -43,11 +43,12 @@ class Roles(DBTable):
         """Get a `role_name` column for specific `guild`."""
         logger.trace(f"Obtaining {role_name} role from {guild.id}")
         record = await self.db_get(
-            column=role_name,
+            column=[role_name],
             specification="serverid=$1",
             sql_args=[guild.id]
         )
-        return record
+        role_id = int(list(record.values())[0])
+        return guild.get_role(role_id)
 
     async def set_default_role(self, guild: Guild, role: Role) -> None:
         await self._set_role("_default", guild, role)

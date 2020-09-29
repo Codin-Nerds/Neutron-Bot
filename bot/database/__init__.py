@@ -117,18 +117,18 @@ class DBTable(metaclass=Singleton):
         async with self.pool.acquire(timeout=self.timeout) as db:
             return await db.fetch(sql, *sql_args)
 
-    async def db_get(self, column: str, specification: t.Optional[str] = None, sql_args: t.Optional[list] = None) -> asyncpg.Record:
+    async def db_get(self, column: t.List[str], specification: t.Optional[str] = None, sql_args: t.Optional[list] = None) -> asyncpg.Record:
         """
         This method serves as an abstraction layer
         from using SQL syntax in the top-level database
         table class, it runs the basic selection (get)
         query without needing to use SQL syntax at all.
         """
-        sql = f"SELECT {column} FROM {self.table}"
+        sql = f"SELECT {' ,'.join(column)} FROM {self.table}"
         if specification:
             sql += f" WHERE {specification}"
 
-        await self.db_fetchone(sql, sql_args)
+        return await self.db_fetchone(sql, sql_args)
 
     async def db_set(self, columns: t.List[str], values: t.List[str]) -> None:
         """
@@ -159,7 +159,7 @@ class DBTable(metaclass=Singleton):
         sql_update = ""
         for index, column in enumerate(columns):
             if column != conflict_column:
-                sql_update += f"{column}=${index}"
+                sql_update += f"{column}=${index + 1}"
 
         sql = f"""
         INSERT INTO {self.table} ({sql_columns})
