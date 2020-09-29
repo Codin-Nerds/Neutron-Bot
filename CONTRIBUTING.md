@@ -29,10 +29,6 @@ Note that contributions may be rejected on the basis of a contributor failing to
 
 Above all, the needs of our community should come before the wants of an individual. Work together, build solutions to problems and try to do so in a way that people can learn from easily. Abuse of our trust may result in the loss of your Contributor role.
 
-## Changes to this Arrangement
-
-All projects evolve over time, and this contribution guide is no different. This document is open to pull requests or changes by contributors. If you believe you have something valuable to add or change, please don't hesitate to do so in a PR.
-
 ## Type Hinting
 
 [PEP 484](https://www.python.org/dev/peps/pep-0484/) formally specifies type hints for Python functions, added to the Python Standard Library in version 3.5. Type hints are recognized by most modern code editing tools and provide useful insight into both the input and output types of a function, preventing the user from having to go through the codebase to determine these types.
@@ -220,3 +216,7 @@ Methods of marking PR as a draft:
    ![image](https://user-images.githubusercontent.com/20902250/94499276-8930df80-01fc-11eb-9292-7f0c6101b995.png)
 
 As stated earlier **ensure that "Allow edits from maintainers" is checked** This gives permission for maintainers to commit changes directly to your fork, speeding up the review process.
+
+## Changes to this Arrangement
+
+All projects evolve over time, and this contribution guide is no different. This document is open to pull requests or changes by contributors. If you believe you have something valuable to add or change, please don't hesitate to do so in a PR.
