@@ -38,7 +38,7 @@ class Bot(Base_Bot):
             time.sleep(5)
             connected = await self.database.connect()
 
-        await self.database.add_tables(self.db_table_list, self)
+        await self.database.load_tables(self.db_table_list, self)
 
     async def on_ready(self) -> None:
         if self.initial_call:

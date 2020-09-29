@@ -60,4 +60,4 @@ class Roles(DBTable):
 
 
 async def load(bot: Bot, database: Database) -> None:
-    await database.load_table(Roles(bot, database))
+    await database.add_table(Roles(bot, database))

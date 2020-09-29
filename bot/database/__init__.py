@@ -128,7 +128,7 @@ class Database(metaclass=Singleton):
         logger.debug("Closing connection to the database")
         await self.pool.close()
 
-    async def add_tables(self, tables: t.List[str], bot: "Bot") -> None:
+    async def load_tables(self, tables: t.List[str], bot: "Bot") -> None:
         for table in tables:
             logger.trace(f"Adding {table} table")
             module = import_module(table)
@@ -137,7 +137,7 @@ class Database(metaclass=Singleton):
                 return
             await module.load(bot, self)
 
-    async def load_table(self, table: DBTable) -> None:
+    async def add_table(self, table: DBTable) -> None:
         if table in self.tables:
             logger.warning(f"Tried to add already added table ({table.__class__}), skipping.")
             return
