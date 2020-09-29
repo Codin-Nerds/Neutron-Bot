@@ -8,8 +8,12 @@ from bot.core.bot import Bot
 TOKEN = os.getenv("BOT_TOKEN")
 PREFIX = config.COMMAND_PREFIX
 
+extensions = [
+    "bot.cogs.sudo",
+]
+
 bot = Bot(
-    config.extensions,
+    extensions,
     command_prefix=PREFIX,
     activity=Game(name=f"Ping me using {PREFIX}help"),
     case_insensitive=True,

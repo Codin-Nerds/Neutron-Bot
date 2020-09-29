@@ -12,27 +12,12 @@ from discord.ext.commands import Cog, Context, group
 
 from bot import config
 from bot.core.bot import Bot
+from bot.utils import time as tm
 
 
-class Owner(Cog):
+class Sudo(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-
-    def get_uptime(self) -> str:
-    """Get formatted bot's uptime."""
-        now = datetime.utcnow()
-        delta = now - self.bot.start_time
-
-        hours, rem = divmod(int(delta.total_seconds()), 3600)
-        minutes, seconds = divmod(rem, 60)
-        days, hours = divmod(hours, 24)
-
-        if days:
-            formatted = f"`{days}` days, `{hours}` hr, `{minutes}` mins, and `{seconds}` secs"
-        else:
-            formatted = f"`{hours}` hr, `{minutes}` mins, and `{seconds}` secs"
-
-        return formatted
 
     @group(hidden=True)
     async def sudo(self, ctx: Context) -> None:
@@ -44,15 +29,17 @@ class Owner(Cog):
         """Turn the bot off."""
         if ctx.author.id in config.devs:
             await ctx.message.add_reaction("✅")
-            await self.bot.logout()
+            await self.bot.close()
 
     @sudo.command()
     async def restart(self, ctx: Context) -> None:
         """Restart the bot."""
         if ctx.author.id in config.devs:
             await ctx.message.add_reaction("✅")
-            await self.bot.logout()
+            await self.bot.close()
+
             time.sleep(1)
+
             os.system("pipenv run start")
 
     @sudo.command()
@@ -61,7 +48,7 @@ class Owner(Cog):
         if not extension:
             extension = self.bot.extension_list
         else:
-            extension = f"bot.cogs.{extension}"
+            extension = [f"bot.cogs.{extension}"]
 
         for ext in extension:
             try:
@@ -76,7 +63,7 @@ class Owner(Cog):
         if not extension:
             extension = self.bot.extension_list
         else:
-            extension = f"bot.cogs.{extension}"
+            extension = [f"bot.cogs.{extension}"]
 
         for ext in extension:
             try:
@@ -92,7 +79,7 @@ class Owner(Cog):
         if not extension:
             extension = self.bot.extension_list
         else:
-            extension = f"bot.cogs.{extension}"
+            extension = [f"bot.cogs.{extension}"]
 
         for ext in extension:
             try:
@@ -111,8 +98,8 @@ class Owner(Cog):
             f"""
             • Servers: **`{len(self.bot.guilds)}`**
             • Commands: **`{len(self.bot.commands)}`**
-            • members: **`{len(set(self.bot.get_all_members()))}`**
-            • Uptime: **{self.get_uptime()}**
+            • Members: **`{len(set(self.bot.get_all_members()))}`**
+            • Started: **{tm.stringify_reldelta(datetime.utcnow() - self.bot.start_time)}**
             """
         )
         system = textwrap.dedent(
@@ -135,9 +122,9 @@ class Owner(Cog):
         if ctx.author.id in config.devs:
             return True
 
-        embed = Embed(description="This is an owner-only command, you cannot invoke this.", color=Color.red())
+        embed = Embed(description="This is an Owner-only command, you cannot invoke this.", color=Color.red())
         await ctx.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:
-    bot.add_cog(Owner(bot))
+    bot.add_cog(Sudo(bot))
