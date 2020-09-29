@@ -9,6 +9,13 @@ from bot.database import DBTable, Database
 
 
 class Roles(DBTable):
+    """
+    This table stores all guild-specific roles:
+    * `default` role (column is named `_default` to avoid SQL confusion)
+    * `muted` role
+    * `staff` role
+    Under the single `serverid` column
+    """
     populate_command = dedent("""
         CREATE TABLE IF NOT EXISTS roles (
             serverid NUMERIC(40) UNIQUE NOT NULL,
@@ -24,6 +31,7 @@ class Roles(DBTable):
         self.database = database
 
     async def _set_role(self, role_name: str, guild: Guild, role: Role) -> None:
+        """Set a `role_name` column to store `role` for the specific `guild`."""
         logger.debug(f"Setting {role_name} role on {guild.id} to <@&{role.id}>")
         await self.db_upsert(
             columns=["serverid", role_name],
@@ -31,10 +39,11 @@ class Roles(DBTable):
             conflict_column="serverid"
         )
 
-    async def _get_role(self, role: str, guild: Guild) -> asyncpg.Record:
-        logger.trace(f"Obtaining {role} role from {guild.id}")
+    async def _get_role(self, role_name: str, guild: Guild) -> asyncpg.Record:
+        """Get a `role_name` column for specific `guild`."""
+        logger.trace(f"Obtaining {role_name} role from {guild.id}")
         record = await self.db_get(
-            column=role,
+            column=role_name,
             specification="serverid=$1",
             sql_args=[guild.id]
         )
