@@ -93,7 +93,7 @@ class DBTable(metaclass=Singleton):
         async with self.pool.acquire(timeout=self.timeout) as db:
             await db.execute(sql, *sql_args)
 
-    async def db_fetch(self, sql: str, sql_args: t.Optional[list] = None) -> asyncpg.Record:
+    async def db_fetchone(self, sql: str, sql_args: t.Optional[list] = None) -> asyncpg.Record:
         """
         This method serves as an abstraction layer
         from using context manager and fetching the
@@ -104,6 +104,18 @@ class DBTable(metaclass=Singleton):
 
         async with self.pool.acquire(timeout=self.timeout) as db:
             return await db.fetchrow(sql, *sql_args)
+
+    async def db_fetch(self, sql: str, sql_args: t.Optional[list] = None) -> t.List[asyncpg.Record]:
+        """
+        This method serves as an abstraction layer
+        from using context manager and fetching the
+        sql query directly from there.
+        """
+        if not sql_args:
+            sql_args = []
+
+        async with self.pool.acquire(timeout=self.timeout) as db:
+            return await db.fetch(sql, *sql_args)
 
     async def db_get(self, column: str, specification: t.Optional[str] = None, sql_args: t.Optional[list] = None) -> asyncpg.Record:
         """
@@ -116,7 +128,7 @@ class DBTable(metaclass=Singleton):
         if specification:
             sql += f" WHERE {specification}"
 
-        await self.db_fetch(sql, sql_args)
+        await self.db_fetchone(sql, sql_args)
 
     async def db_set(self, columns: t.List[str], values: t.List[str]) -> None:
         """
