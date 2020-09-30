@@ -1,3 +1,5 @@
+import typing as t
+from collections import namedtuple
 from textwrap import dedent
 
 from discord import Guild, Role
@@ -24,10 +26,33 @@ class Roles(DBTable):
         )
     """)
 
+    Entry = namedtuple("Roles", ("default", "muted", "staff"))
+
     def __init__(self, bot: Bot, database: Database):
         super().__init__(database, "roles")
         self.bot = bot
         self.database = database
+        self.cache: t.Dict[int, "Roles.Entry"] = {}
+
+    async def __async_init__(self):
+        """
+        Obtain all database rows and populate the cache
+        with them.
+        """
+        entries = await self.db_get(columns=["serverid", "_default", "muted", "staff"])
+
+        for entry in entries:
+            lst_entry = list(entry)
+            self.cache[lst_entry[0]] = self.Entry(*lst_entry[1:])
+
+    def update_cache(self, server_id: int, role: str, value: int) -> None:
+        """Update or add roles in stored cache."""
+        if server_id in self.cache:
+            self.cache[server_id] = self.cache[server_id]._replace(**{role: value})
+        else:
+            roles = {"_default": 0, "muted": 0, "staff": 0}
+            roles.update({role: value})
+            self.cache[server_id] = self.Entry(**roles)
 
     async def _set_role(self, role_name: str, guild: Guild, role: Role) -> None:
         """Set a `role_name` column to store `role` for the specific `guild`."""
@@ -37,17 +62,11 @@ class Roles(DBTable):
             values=[guild.id, role.id],
             conflict_column="serverid"
         )
+        self.update_cache(guild.id, role_name, role.id)
 
-    async def _get_role(self, role_name: str, guild: Guild) -> Role:
-        """Get a `role_name` column for specific `guild`."""
-        logger.trace(f"Obtaining {role_name} role from {guild.id}")
-        record = await self.db_get(
-            columns=[role_name],
-            specification="serverid=$1",
-            sql_args=[guild.id]
-        )
-        role_id = int(list(record.values())[0])
-        return guild.get_role(role_id)
+    def _get_role(self, role_name: str, guild: Guild) -> Role:
+        """Get a `role_name` column for specific `guild` from cache."""
+        return getattr(self.cache[guild.id], role_name)
 
     async def set_default_role(self, guild: Guild, role: Role) -> None:
         await self._set_role("_default", guild, role)
@@ -58,14 +77,14 @@ class Roles(DBTable):
     async def set_staff_role(self, guild: Guild, role: Role) -> None:
         await self._set_role("staff", guild, role)
 
-    async def get_default_role(self, guild: Guild) -> Role:
-        return await self._get_role("_default", guild)
+    def get_default_role(self, guild: Guild) -> Role:
+        return self._get_role("_default", guild)
 
-    async def get_muted_role(self, guild: Guild) -> Role:
-        return await self._get_role("muted", guild)
+    def get_muted_role(self, guild: Guild) -> Role:
+        return self._get_role("muted", guild)
 
-    async def get_staff_role(self, guild: Guild) -> Role:
-        return await self._get_role("staff", guild)
+    def get_staff_role(self, guild: Guild) -> Role:
+        return self._get_role("staff", guild)
 
 
 async def load(bot: Bot, database: Database) -> None:
