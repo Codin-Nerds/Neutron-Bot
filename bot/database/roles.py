@@ -70,7 +70,7 @@ class Roles(DBTable):
         )
         self.update_cache(guild.id, role_name, role.id)
 
-    def _get_role(self, role_name: str, guild: Guild) -> Role:
+    def _get_role(self, role_name: str, guild: Guild) -> int:
         """Get a `role_name` column for specific `guild` from cache."""
         return getattr(self.cache[guild.id], role_name)
 
@@ -83,13 +83,17 @@ class Roles(DBTable):
     async def set_staff_role(self, guild: Guild, role: Role) -> None:
         await self._set_role("staff", guild, role)
 
-    def get_default_role(self, guild: Guild) -> Role:
-        return self._get_role("_default", guild)
+    def get_default_role(self, guild: Guild) -> int:
+        role = self._get_role("_default", guild)
+        if role == 0:
+            role = guild.default_role
 
-    def get_muted_role(self, guild: Guild) -> Role:
+        return role
+
+    def get_muted_role(self, guild: Guild) -> int:
         return self._get_role("muted", guild)
 
-    def get_staff_role(self, guild: Guild) -> Role:
+    def get_staff_role(self, guild: Guild) -> int:
         return self._get_role("staff", guild)
 
 

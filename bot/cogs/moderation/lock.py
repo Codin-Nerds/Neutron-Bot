@@ -2,7 +2,7 @@ import typing as t
 from collections import defaultdict
 
 from dateutil.relativedelta import relativedelta
-from discord import Color, Embed, TextChannel
+from discord import TextChannel
 from discord.ext.commands import Cog, Context, command
 from loguru import logger
 
@@ -109,19 +109,10 @@ class Lock(Cog):
         Also make sure there's a default role set for that server.
         In case there isn't, send an error message.
         """
-        if not ctx.author.permissions_in(ctx.channel).manage_messages:
-            return False
+        if ctx.author.permissions_in(ctx.channel).manage_messages:
+            return True
 
-        default_role = self.roles_db.get_default_role(ctx.guild)
-        if not default_role:
-            embed = Embed(
-                title="Error",
-                description="You can't use lock features unless you've set up the default role.",
-                color=Color.red()
-            )
-            await ctx.send(embed=embed)
-            return False
-        return True
+        return False
 
 
 def setup(bot: Bot) -> None:
