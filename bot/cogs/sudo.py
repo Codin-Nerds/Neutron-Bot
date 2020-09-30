@@ -27,24 +27,21 @@ class Sudo(Cog):
     @sudo.command()
     async def shutdown(self, ctx: Context) -> None:
         """Turn the bot off."""
-        if ctx.author.id in config.devs:
-            await ctx.message.add_reaction("✅")
-            await self.bot.close()
+        await ctx.message.add_reaction("✅")
+        await self.bot.close()
 
     @sudo.command()
     async def restart(self, ctx: Context) -> None:
         """Restart the bot."""
-        if ctx.author.id in config.devs:
-            await ctx.message.add_reaction("✅")
-            await self.bot.close()
+        await ctx.message.add_reaction("✅")
+        await self.bot.close()
 
-            time.sleep(1)
+        time.sleep(1)
 
-            os.system("pipenv run start")
+        os.system("pipenv run start")
 
     @sudo.command()
-    async def load(self, ctx: Context, extension: str = None) -> None:
-        """Load a cog."""
+    async def cogmanage(self, ctx: Context, process: str, extension: str = None) -> None:
         if not extension:
             extension = self.bot.extension_list
         else:
@@ -52,38 +49,15 @@ class Sudo(Cog):
 
         for ext in extension:
             try:
-                self.bot.load_extension(ext)
-            except DiscordException:
-                await ctx.send(f"```py\n{traceback.format_exc()}\n```")
-            else:
-                await ctx.send("\N{SQUARED OK}")
-
-    @sudo.command()
-    async def reload(self, ctx: Context, extension: str = None) -> None:
-        if not extension:
-            extension = self.bot.extension_list
-        else:
-            extension = [f"bot.cogs.{extension}"]
-
-        for ext in extension:
-            try:
-                self.bot.unload_extension(ext)
-                self.bot.load_extension(ext)
-            except DiscordException:
-                await ctx.send(f"```py\n{traceback.format_exc()}\n```")
-            else:
-                await ctx.send("\N{SQUARED OK}")
-
-    @sudo.command()
-    async def unload(self, ctx: Context, extension: str = None) -> None:
-        if not extension:
-            extension = self.bot.extension_list
-        else:
-            extension = [f"bot.cogs.{extension}"]
-
-        for ext in extension:
-            try:
-                self.bot.unload_extension(ext)
+                if process == "load":
+                    self.bot.load_extension(ext)
+                elif process == "unload":
+                    self.bot.unload_extension(ext)
+                elif process == "reload":
+                    self.bot.unload_extension(ext)
+                    self.bot.load_extension(ext)
+                else:
+                    await ctx.send("Invalid process for extensions")
             except DiscordException:
                 await ctx.send(f"```py\n{traceback.format_exc()}\n```")
             else:
@@ -92,19 +66,17 @@ class Sudo(Cog):
     @sudo.command()
     async def stats(self, ctx: Context) -> None:
         """Show full bot stats."""
-        implementation = platform.python_implementation()
-
         general = textwrap.dedent(
             f"""
             • Servers: **`{len(self.bot.guilds)}`**
             • Commands: **`{len(self.bot.commands)}`**
             • Members: **`{len(set(self.bot.get_all_members()))}`**
-            • Started: **{tm.stringify_reldelta(datetime.utcnow() - self.bot.start_time)}**
+            • Uptime: **{tm.stringify_reldelta(datetime.utcnow() - self.bot.start_time)}**
             """
         )
         system = textwrap.dedent(
             f"""
-            • Python: **`{platform.python_version()} with {implementation}`**
+            • Python: **`{platform.python_version()} with {platform.python_implementation()}`**
             • discord.py: **`{discord_version}`**
             """
         )
@@ -112,18 +84,24 @@ class Sudo(Cog):
         embed = Embed(title="BOT STATISTICS", color=Color.blue())
         embed.add_field(name="**❯❯ General**", value=general, inline=True)
         embed.add_field(name="**❯❯ System**", value=system, inline=True)
+
         embed.set_author(name=f"{self.bot.user.name}'s Stats", icon_url=self.bot.user.avatar_url)
         embed.set_footer(text=f"Made by {config.creator} Team.")
 
         await ctx.send(embed=embed)
 
     async def cog_check(self, ctx: Context) -> t.Union[bool, None]:
-        """Only devs can use this."""
+        """Only the bot owners can use this."""
         if ctx.author.id in config.devs:
             return True
 
-        embed = Embed(description="This is an Owner-only command, you cannot invoke this.", color=Color.red())
-        await ctx.send(embed=embed)
+        await ctx.send(
+            embed=Embed(
+                description=":x: Sorry, this is an reserved for bot owners",
+                color=Color.red()
+            )
+        )
+        return False
 
 
 def setup(bot: Bot) -> None:
