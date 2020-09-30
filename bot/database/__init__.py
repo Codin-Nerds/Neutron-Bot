@@ -179,11 +179,7 @@ class Database(metaclass=Singleton):
     disconnecting from the database and loading the top-level
     database table classes.
     """
-    def __init__(
-        self,
-        db_parameters: dict,
-        timeout: int = 5
-    ):
+    def __init__(self, db_parameters: dict, timeout: int = 5):
         required_parameters = set(["host", "database", "user", "password"])
         # Make sure db_parameters contains all required keys by checking
         # if it's a subset of `required_parameters`
