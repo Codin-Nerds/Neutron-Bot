@@ -117,18 +117,22 @@ class DBTable(metaclass=Singleton):
         async with self.pool.acquire(timeout=self.timeout) as db:
             return await db.fetch(sql, *sql_args)
 
-    async def db_get(self, column: t.List[str], specification: t.Optional[str] = None, sql_args: t.Optional[list] = None) -> asyncpg.Record:
+    async def db_get(
+        self, columns: t.List[str], specification: t.Optional[str] = None, sql_args: t.Optional[list] = None
+    ) -> t.Union[asyncpg.Record, t.List[asyncpg.Record]]:
         """
         This method serves as an abstraction layer
         from using SQL syntax in the top-level database
         table class, it runs the basic selection (get)
         query without needing to use SQL syntax at all.
         """
-        sql = f"SELECT {' ,'.join(column)} FROM {self.table}"
+        sql = f"SELECT {' ,'.join(columns)} FROM {self.table}"
         if specification:
             sql += f" WHERE {specification}"
 
-        return await self.db_fetchone(sql, sql_args)
+        if len(columns) == 1:
+            return await self.db_fetchone(sql, sql_args)
+        return await self.db_fetch(sql, sql_args)
 
     async def db_set(self, columns: t.List[str], values: t.List[str]) -> None:
         """

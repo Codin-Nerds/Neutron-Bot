@@ -42,7 +42,7 @@ class Roles(DBTable):
         """Get a `role_name` column for specific `guild`."""
         logger.trace(f"Obtaining {role_name} role from {guild.id}")
         record = await self.db_get(
-            column=[role_name],
+            columns=[role_name],
             specification="serverid=$1",
             sql_args=[guild.id]
         )
