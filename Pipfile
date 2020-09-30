@@ -15,7 +15,7 @@ autopep8 = "~=1.5.4"
 [packages]
 loguru = "~=0.5.3"
 python-dateutil = "~=2.8.1"
-"discord.py" = "~=1.4.1"
+"discord.py" = "~=1.5"
 asyncpg = "~=0.21.0"
 
 [scripts]
