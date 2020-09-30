@@ -40,8 +40,7 @@ class Sudo(Cog):
 
         os.system("pipenv run start")
 
-    @sudo.command()
-    async def cogmanage(self, ctx: Context, process: str, extension: str = None) -> None:
+    async def _cogmanage(self, ctx: Context, process: str, extension: t.Optional[str] = None) -> None:
         if not extension:
             extension = self.bot.extension_list
         else:
@@ -62,6 +61,18 @@ class Sudo(Cog):
                 await ctx.send(f"```py\n{traceback.format_exc()}\n```")
             else:
                 await ctx.send("\N{SQUARED OK}")
+
+    @sudo.command()
+    async def load(self, ctx: Context, extension: t.Optional[str]) -> None:
+        await self._cogmanage(ctx, "load", extension)
+
+    @sudo.command()
+    async def unload(self, ctx: Context, extension: t.Optional[str]) -> None:
+        await self._cogmanage(ctx, "unload", extension)
+
+    @sudo.command()
+    async def reload(self, ctx: Context, extension: t.Optional[str]) -> None:
+        await self._cogmanage(ctx, "reload", extension)
 
     @sudo.command()
     async def stats(self, ctx: Context) -> None:
@@ -97,7 +108,7 @@ class Sudo(Cog):
 
         await ctx.send(
             embed=Embed(
-                description=":x: Sorry, this is an reserved for bot owners",
+                description="❌ Sorry, this command is reserved for bot owners",
                 color=Color.red()
             )
         )
