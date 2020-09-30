@@ -10,7 +10,7 @@ from bot.core.bot import Bot
 from bot.core.converters import Duration
 from bot.core.timer import Timer
 from bot.database.roles import Roles
-from bot.utils.time import stringify_timedelta
+from bot.utils.time import stringify_reldelta
 
 
 class Lock(Cog):
@@ -58,7 +58,7 @@ class Lock(Cog):
         return True
 
     @command(aliases=["silence"])
-    async def lock(self, ctx: Context, reason: t.Optional[str] = None, duration: t.Optional[Duration] = None) -> None:
+    async def lock(self, ctx: Context = None, duration: t.Optional[Duration] = None, *, reason: t.Optional[str]) -> None:
         """
         Disallow everyones permission to talk in this channel
         for given `duration` or indefinitely.
@@ -75,7 +75,7 @@ class Lock(Cog):
             await ctx.send(f"🔒 Channel locked indefinitely: {reason}.")
             return
 
-        await ctx.send(f"🔒 Channel locked for {stringify_timedelta(relativedelta(seconds=duration))}: {reason}.")
+        await ctx.send(f"🔒 Channel locked for {stringify_reldelta(relativedelta(seconds=duration))}: {reason}.")
         self.timer.delay(duration, ctx.channel.id, ctx.invoke(self.unlock))
 
     @command(aliases=["unsilence"])
