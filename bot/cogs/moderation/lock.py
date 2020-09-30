@@ -9,6 +9,7 @@ from loguru import logger
 from bot.core.bot import Bot
 from bot.core.converters import Duration
 from bot.core.timer import Timer
+from bot.database.roles import Roles
 from bot.utils.time import stringify_timedelta
 
 
@@ -17,6 +18,7 @@ class Lock(Cog):
         self.bot = bot
         self.locked_channels = defaultdict(set)
         self.timer = Timer("channel_lock")
+        self.roles_db: Roles = Roles.reference()
 
     async def _lock(self, channel: TextChannel) -> bool:
         """
@@ -26,7 +28,7 @@ class Lock(Cog):
         Return `False` in case the channel was already silenced,
         otherwise return `True`
         """
-        default_role_id = await self.bot.database.get_default_role(channel.guild.id)
+        default_role_id = self.roles_db.get_default_role(channel.guild)
         default_role = channel.guild.get_role(default_role_id)
         current_permissions = channel.overwrites_for(default_role)
 
@@ -43,7 +45,7 @@ class Lock(Cog):
         Reset the permission to `send_messages`
         in `channel` for the `default_role` on that server.
         """
-        default_role_id = await self.bot.database.get_default_role(channel.guild.id)
+        default_role_id = self.roles_db.get_default_role(channel.guild)
         default_role = channel.guild.get_role(default_role_id)
         current_permissions = channel.overwrites_for(default_role)
 
@@ -63,7 +65,7 @@ class Lock(Cog):
         """
         logger.debug(f"Channel #{ctx.channel} was silenced by {ctx.author}.")
 
-        if not await self._lock(ctx.channel, duration=duration):
+        if not await self._lock(ctx.channel):
             await ctx.send(":x: This channel is already locked.")
             return
 
@@ -82,18 +84,18 @@ class Lock(Cog):
         logger.debug(f"Channel #{ctx.channel} was unsilenced.")
 
         if await self._unlock(ctx.channel):
-            self.timer.cancel(ctx.channel.id)
+            self.timer.abort(ctx.channel.id)
             await ctx.send("🔓 Channel unlocked.")
         else:
             await ctx.send(":x: This channel isn't silenced.")
 
-    async def cog_unload(self) -> None:
+    def cog_unload(self) -> None:
         """Send a modlog message about the channels which were left unsilenced"""
         self.timer.abort_all()
         for guild, channels in self.locked_channels:
             txt_channels = ''.join(channel.mention for channel in channels)
 
-            moderator_role_id = await self.bot.database.get_staff_role(guild.id)
+            moderator_role_id = self.roles_db.get_staff_role(guild.id)
             if moderator_role_id:
                 message = f"<@&{moderator_role_id}> "
             else:
@@ -110,7 +112,7 @@ class Lock(Cog):
         if not ctx.author.permissions_in(ctx.channel).manage_messages:
             return False
 
-        default_role = await self.bot.database.get_default_role(ctx.guild.id)
+        default_role = self.roles_db.get_default_role(ctx.guild)
         if not default_role:
             embed = Embed(
                 title="Error",
