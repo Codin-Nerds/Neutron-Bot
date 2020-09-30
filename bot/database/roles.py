@@ -1,5 +1,5 @@
 import typing as t
-from collections import namedtuple
+from dataclasses import dataclass
 from textwrap import dedent
 
 from discord import Guild, Role
@@ -7,6 +7,14 @@ from loguru import logger
 
 from bot.core.bot import Bot
 from bot.database import DBTable, Database
+
+
+@dataclass
+class Entry:
+    """Class for storing the database rows of roles table."""
+    _default: int
+    muted: int
+    staff: int
 
 
 class Roles(DBTable):
@@ -26,13 +34,11 @@ class Roles(DBTable):
         )
     """)
 
-    Entry = namedtuple("Roles", ("default", "muted", "staff"))
-
     def __init__(self, bot: Bot, database: Database):
         super().__init__(database, "roles")
         self.bot = bot
         self.database = database
-        self.cache: t.Dict[int, "Roles.Entry"] = {}
+        self.cache: t.Dict[int, Entry] = {}
 
     async def __async_init__(self):
         """
@@ -43,12 +49,12 @@ class Roles(DBTable):
 
         for entry in entries:
             lst_entry = list(entry)
-            self.cache[lst_entry[0]] = self.Entry(*lst_entry[1:])
+            self.cache[lst_entry[0]] = Entry(*lst_entry[1:])
 
     def update_cache(self, server_id: int, role: str, value: int) -> None:
         """Update or add roles in stored cache."""
         if server_id in self.cache:
-            self.cache[server_id] = self.cache[server_id]._replace(**{role: value})
+            setattr(self.cache[server_id], role, value)
         else:
             roles = {"_default": 0, "muted": 0, "staff": 0}
             roles.update({role: value})
