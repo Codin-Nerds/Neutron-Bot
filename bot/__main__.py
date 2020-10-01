@@ -11,9 +11,12 @@ PREFIX = config.COMMAND_PREFIX
 extensions = [
     "bot.cogs.sudo",
 ]
+db_tables = [
+    "bot.database.roles"
+]
 
 bot = Bot(
-    extensions,
+    extensions, db_tables,
     command_prefix=PREFIX,
     activity=Game(name=f"Ping me using {PREFIX}help"),
     case_insensitive=True,

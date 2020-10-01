@@ -6,19 +6,20 @@ from discord.ext.commands import AutoShardedBot as Base_Bot
 from loguru import logger
 
 from bot import config
-from bot.core.database import Database
+from bot.database import Database
 
 
 class Bot(Base_Bot):
     """Subclassed Neutron bot."""
 
-    def __init__(self, extensions: list, *args, **kwargs) -> None:
+    def __init__(self, extensions: list, db_tables: list, *args, **kwargs) -> None:
         """Initialize the subclass."""
         super().__init__(*args, **kwargs)
 
         self.start_time = datetime.utcnow()
 
         self.extension_list = extensions
+        self.db_table_list = db_tables
         self.initial_call = True
 
     async def load_extensions(self) -> None:
@@ -32,7 +33,7 @@ class Bot(Base_Bot):
 
     async def db_connect(self) -> None:
         """Estabolish connection with the database."""
-        self.database = Database(**config.DATABASE)
+        self.database = Database(config.DATABASE)
         connected = await self.database.connect()
         while not connected:
             logger.warning("Retrying to connect to database in 5s")
@@ -40,11 +41,12 @@ class Bot(Base_Bot):
             time.sleep(5)
             connected = await self.database.connect()
 
+        await self.database.load_tables(self.db_table_list, self)
+
     async def on_ready(self) -> None:
         if self.initial_call:
             self.initial_call = False
 
-            await self.db_connect()
             await self.load_extensions()
 
             logger.info("Bot is ready")
@@ -75,6 +77,8 @@ class Bot(Base_Bot):
     async def close(self) -> None:
         """Close the bot and do some cleanup."""
         logger.info("Closing bot connection")
-        await self.session.close()
-        await self.database.disconnect()
+        if hasattr(self, "session"):
+            await self.session.close()
+        if hasattr(self, "database") and hasattr(self.database, "pool"):
+            await self.database.disconnect()
         await super().close()

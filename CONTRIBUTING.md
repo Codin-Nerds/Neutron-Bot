@@ -29,10 +29,6 @@ Note that contributions may be rejected on the basis of a contributor failing to
 
 Above all, the needs of our community should come before the wants of an individual. Work together, build solutions to problems and try to do so in a way that people can learn from easily. Abuse of our trust may result in the loss of your Contributor role.
 
-## Changes to this Arrangement
-
-All projects evolve over time, and this contribution guide is no different. This document is open to pull requests or changes by contributors. If you believe you have something valuable to add or change, please don't hesitate to do so in a PR.
-
 ## Type Hinting
 
 [PEP 484](https://www.python.org/dev/peps/pep-0484/) formally specifies type hints for Python functions, added to the Python Standard Library in version 3.5. Type hints are recognized by most modern code editing tools and provide useful insight into both the input and output types of a function, preventing the user from having to go through the codebase to determine these types.
@@ -125,10 +121,102 @@ def foobar(ctx: Context, value: str) -> None:
 
 Note that we end each sentence in docstrings with `.` to keep everything consistent
 
+## Database table management
+
+We use a custom way to define our database tables, this was implemented in [PR #11](https://github.com/Codin-Nerds/Neutron-Bot/pull/11).
+You can check that pull request as it explains in detail what was changed. To explain it briefly:
+
+Every database table needs to have a it's own file. This file should be named by the table name (although this isn't mandatory).
+This file needs to be stored under the `bot/database` directory and it should look like this:
+
+```py
+import asyncpg
+
+from bot.core.bot import Bot
+from bot.database import DBTable, Database
+
+
+class Roles(DBTable):
+    populate_command = """
+        CREATE TABLE IF NOT EXISTS roles (
+            serverid NUMERIC(40) UNIQUE NOT NULL,
+            staff_role NUMERIC(40) DEFAULT 0,
+            user_role NUMERIC(40) DEFAULT 0
+        )
+        """
+
+    def __init__(self, bot: Bot, database: Database):
+        super().__init__(database, "roles")
+        self.bot = bot
+        self.database = database
+
+    async def set_staff_role(self, server_id: int, role_id: int) -> None:
+        await self.db_upsert(
+            columns=["serverid", "staff_role"],
+            values=[server_id, role_id],
+            conflict_column="serverid"
+        )
+
+    async def get_staff_role(self, server_id: int) -> asyncpg.Record:
+        return await self.db_get(
+            column="staff_role",
+            specification="serverid=$1",
+            sql_args=[guild.id]
+        )
+
+
+async def load(bot: Bot, database: Database) -> None:
+    await database.add_table(Roles(bot, database))
+```
+
+You can see the use of a `load` function on the bottom of the file, similarly to what discord.py uses for cogs.
+
+You can also notice the absence of `SQL` code in the `set_staff_role` and `get_staff_role`, this is because of the custom built functions to make the process of managing the database table easier and it's also considered more readable.
+
+There are a total of 3 functions like this which provide the SQL abstraction layer: `DBTable.db_upsert`, `DBTable.db_get`, and `DBTable.db_set`. In case you'd need something more specific you will have to fall back to the SQL query, you can execute this query using `DBTable.db_execute(sql, [arg1, arg2])` or if you want to obtain data from the database, you can use the `DBTable.db_fetchone(sql, [arg1, arg2])` or `DBTable.db_fetch(sql, [arg1, arg2])`.
+
+The `populate_command` class attribute on the top holds the query for initial creation the table. This query will be executed automatically when the table loads.
+
+After you've created your table file, you'll need to reference it in the `db_tables` list defined in [`bot/__main__.py`](https://github.com/Codin-Nerds/Neutron-Bot/blob/master/bot/__main__.py).
+
+The table will be loaded with the bots initiation automatically.
+
+After that you're ready to use your database table functions inside of a cog, doing that is pretty simple:
+
+```py
+from discord.ext.commands import Cog
+
+from bot.core.bot import Bot
+from bot.database.roles import Roles, Context, command
+
+class Foo(Cog):
+    def __init__(self, bot: bot):
+        self.bot = bot
+        self.roles_db: Roles = Roles.reference()
+
+    async def set_staff(self, ctx: Context, staff_role_id: int) -> None:
+        await self.roles_db.set_staff_role(ctx.guild.id, staff_role_id)
+```
+
+Notice that the type of `self.roles_db` is hard defined. This is because the return type `Roles.reference()` is only set to an instance of `DBTable` not the specific table. That means that if you didn't hard define the type hint for it, your code editor won't be able to provide meaningful suggestions from that database table class.
+
 ## Work in Progress (WIP) PRs
 
-Github [provides a PR feature](https://github.com/python-discord/bot/blob/master/CONTRIBUTING.md) that allows PR author to mark it as WIP. This provides both a visual and functional indicator that the contents of the PR are in a draft state and not yet ready for formal review.
+Github provides a PR feature that allows PR author to mark it as WIP. This provides both a visual and functional indicator that the contents of the PR are in a draft state and not yet ready for formal review.
 
-This feature should be utilized in place of the traditional method of prepending [WIP] to the PR title.
+This feature should be utilized in place of the traditional method of prepending \[WIP\] to the PR title.
+
+Methods of marking PR as a draft:
+
+1. When creating it
+
+   ![image](https://user-images.githubusercontent.com/20902250/94499351-bc736e80-01fc-11eb-8e99-a7863dd1428a.png)
+2. After it was crated
+
+   ![image](https://user-images.githubusercontent.com/20902250/94499276-8930df80-01fc-11eb-9292-7f0c6101b995.png)
 
 As stated earlier **ensure that "Allow edits from maintainers" is checked** This gives permission for maintainers to commit changes directly to your fork, speeding up the review process.
+
+## Changes to this Arrangement
+
+All projects evolve over time, and this contribution guide is no different. This document is open to pull requests or changes by contributors. If you believe you have something valuable to add or change, please don't hesitate to do so in a PR.
