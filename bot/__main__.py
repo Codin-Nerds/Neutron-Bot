@@ -9,12 +9,11 @@ TOKEN = os.getenv("BOT_TOKEN")
 PREFIX = config.COMMAND_PREFIX
 
 extensions = [
-    # "bot.cogs.example",
+    "bot.cogs.sudo",
 ]
 db_tables = [
     "bot.database.roles"
 ]
-
 
 bot = Bot(
     extensions, db_tables,
