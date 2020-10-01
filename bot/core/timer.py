@@ -44,7 +44,7 @@ class Timer:
             coroutine.close()  # Close the coroutine to avoid never awaited error
             return
 
-        task = asyncio.create_task(coro, name=f"{self.id}:{task_name}")
+        task = asyncio.create_task(coroutine, name=f"{self.id}:{task_name}")
         task.add_done_callback(lambda executed_task: self._task_executed(task_name, executed_task))
 
         self.delayed_tasks[task_name] = task
@@ -97,7 +97,7 @@ class Timer:
                 logger.debug(f"Aborting the coroutine from {self.id}:{task_name} task.")
                 coro.close()
 
-    async def _task_executed(self, task_name: t.Hashable, executed_task: t.Coroutine) -> None:
+    def _task_executed(self, task_name: t.Hashable, executed_task: t.Coroutine) -> None:
         """
         Remove the task from `delayed_tasks` dict once it was executed.
 
@@ -115,7 +115,7 @@ class Timer:
                 f"Stored task {self.id}:{task_name} ({id(stored_task)}) "
                 f"doesn't match the finished task ({id(executed_task)})"
             )
-        else:
+        elif not executed_task.cancelled():
             logger.warning(
                 f"Task {self.id}:{task_name} ({id(executed_task)}) wasn't found, "
                 f"It seems to have been manually removed without canceling it"

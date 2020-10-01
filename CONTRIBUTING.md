@@ -159,7 +159,7 @@ class Roles(DBTable):
 
     async def get_staff_role(self, server_id: int) -> asyncpg.Record:
         return await self.db_get(
-            column="staff_role",
+            columns="staff_role",
             specification="serverid=$1",
             sql_args=[guild.id]
         )

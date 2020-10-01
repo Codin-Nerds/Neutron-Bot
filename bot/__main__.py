@@ -9,6 +9,7 @@ TOKEN = os.getenv("BOT_TOKEN")
 PREFIX = config.COMMAND_PREFIX
 
 extensions = [
+    "bot.cogs.moderation.lock",
     "bot.cogs.sudo",
 ]
 db_tables = [

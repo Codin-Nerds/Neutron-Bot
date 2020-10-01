@@ -2,12 +2,14 @@ import re
 import typing as t
 from ast import literal_eval
 from contextlib import suppress
+from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 from discord import Member, User
+from discord.errors import NotFound
 from discord.ext.commands import (
     BadArgument, Context, Converter,
-    MemberConverter, MemberNotFound, NotFound,
+    MemberConverter, MemberNotFound,
     UserConverter, UserNotFound
 )
 
@@ -120,6 +122,26 @@ class TimeDelta(Converter):
 
         duration_dict = {unit: int(amount) for unit, amount in time_delta.groupdict(default=0).items()}
         return relativedelta(**duration_dict)
+
+
+class Duration(TimeDelta):
+    """Convert duration strings into amount of seconds"""
+
+    async def convert(self, ctx: Context, duration: str) -> int:
+        """
+        Convert a `duration` string into a relativedelta using
+        super `TimeDelta` converter. After that, simply change
+        the relative delta into the amount of seconds it represents.
+        """
+        delta = await super().convert(ctx, duration)
+
+        now = datetime.utcnow()
+        try:
+            diff = (now + delta) - now
+        except ValueError:
+            raise BadArgument("Specified duration is outside maximum range.")
+
+        return diff.total_seconds()
 
 
 class CodeBlock(Converter):

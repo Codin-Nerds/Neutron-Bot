@@ -1,4 +1,6 @@
 import typing as t
+from abc import abstractmethod
+from contextlib import suppress
 from importlib import import_module
 
 import asyncpg
@@ -48,10 +50,35 @@ class DBTable(metaclass=Singleton):
         self.pool = self.database.pool
         self.timeout = self.database.timeout
 
+    @abstractmethod
+    async def __async_init__(self) -> None:
+        """
+        This is asynchronous initialization function which
+        will get automatically called by `Database` when
+        the table is added. (Calling this method is handeled
+        by the `_populate` function).
+        """
+        raise NotImplementedError
+
+    async def _init(self) -> None:
+        """
+        This method calls `__async_init__` method from top-level
+        table class and calles `_populate` which crates the
+        initial table structure accordingly to the top-level defined
+        `populate_command` sql query.
+        """
+        with suppress(NotImplementedError):
+            await self.__async_init__()
+
+        await self._populate()
+
     async def _populate(self) -> None:
         """
         This method is used to create the initial table structure
         and define it's structure and columns.
+
+        This method also calls `__async_init__` method on top level table
+        (if there is one).
         """
         if not hasattr(self, "populate_command"):
             logger.warning(f"Table {self.__class__} doesn't have a `populate_command` attribute set, skipping populating.")
@@ -117,18 +144,22 @@ class DBTable(metaclass=Singleton):
         async with self.pool.acquire(timeout=self.timeout) as db:
             return await db.fetch(sql, *sql_args)
 
-    async def db_get(self, column: t.List[str], specification: t.Optional[str] = None, sql_args: t.Optional[list] = None) -> asyncpg.Record:
+    async def db_get(
+        self, columns: t.List[str], specification: t.Optional[str] = None, sql_args: t.Optional[list] = None
+    ) -> t.Union[asyncpg.Record, t.List[asyncpg.Record]]:
         """
         This method serves as an abstraction layer
         from using SQL syntax in the top-level database
         table class, it runs the basic selection (get)
         query without needing to use SQL syntax at all.
         """
-        sql = f"SELECT {' ,'.join(column)} FROM {self.table}"
+        sql = f"SELECT {' ,'.join(columns)} FROM {self.table}"
         if specification:
             sql += f" WHERE {specification}"
 
-        return await self.db_fetchone(sql, sql_args)
+        if len(columns) == 1:
+            return await self.db_fetchone(sql, sql_args)
+        return await self.db_fetch(sql, sql_args)
 
     async def db_set(self, columns: t.List[str], values: t.List[str]) -> None:
         """
@@ -247,7 +278,7 @@ class Database(metaclass=Singleton):
             raise TypeError("`table` argument must be an instance of `DBTable`")
 
         self.tables.add(table)
-        await table._populate()
+        await table._init()
 
     async def remove_table(self, table: "DBTable") -> None:
         """

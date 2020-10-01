@@ -40,7 +40,7 @@ def stringify_reldelta(rel_delta: relativedelta, min_unit: str = "seconds") -> s
 
     for unit, value in time_dict.items():
         if value:
-            time_list.append(f"{value} {unit if value != 1 else unit[:-1]}")
+            time_list.append(f"{int(value)} {unit if value != 1 else unit[:-1]}")
 
         if unit == min_unit:
             break
