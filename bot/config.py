@@ -4,6 +4,10 @@ import os
 # Developer Mode Settings:
 DEV_MODE = True
 
+# Ownership settings:
+creator = "The Codin Team"
+devs = [711194921683648523, 306876636526280705]
+
 # Database
 DATABASE = {
     "host": os.getenv("DATABASE_HOST", "127.0.0.1"),
