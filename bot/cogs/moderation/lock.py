@@ -1,3 +1,4 @@
+import asyncio
 import typing as t
 from collections import defaultdict
 
@@ -92,15 +93,15 @@ class Lock(Cog):
     def cog_unload(self) -> None:
         """Send a modlog message about the channels which were left unsilenced"""
         self.timer.abort_all()
-        for guild, channels in self.locked_channels:
-            txt_channels = ''.join(channel.mention for channel in channels)
-
+        for guild, channels in self.locked_channels.items():
             moderator_role_id = self.roles_db.get_staff_role(guild.id)
             if moderator_role_id:
                 message = f"<@&{moderator_role_id}> "
             else:
                 message = ""
-            message += f"Some channels were left locked after lock cog unloaded: {txt_channels}"
+            message += "This channel was left locked after lock cog unloaded"
+            for channel in channels:
+                asyncio.create_task(channel.send(message))
 
     async def cog_check(self, ctx: Context) -> bool:
         """
