@@ -60,40 +60,47 @@ class Roles(DBTable):
             roles.update({role: value})
             self.cache[server_id] = self.Entry(**roles)
 
-    async def _set_role(self, role_name: str, guild: Guild, role: Role) -> None:
+    async def _set_role(self, role_name: str, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
         """Set a `role_name` column to store `role` for the specific `guild`."""
-        logger.debug(f"Setting {role_name} role on {guild.id} to <@&{role.id}>")
+        if isinstance(guild, Guild):
+            guild = guild.id
+        if isinstance(role, Role):
+            role = role.id
+
+        logger.debug(f"Setting {role_name} role on {guild} to <@&{role}>")
         await self.db_upsert(
             columns=["serverid", role_name],
-            values=[guild.id, role.id],
+            values=[guild, role],
             conflict_column="serverid"
         )
         self.update_cache(guild.id, role_name, role.id)
 
-    def _get_role(self, role_name: str, guild: Guild) -> int:
+    def _get_role(self, role_name: str, guild: t.Union[Guild, int]) -> int:
         """Get a `role_name` column for specific `guild` from cache."""
-        return getattr(self.cache[guild.id], role_name)
+        if isinstance(guild, Guild):
+            guild = guild.id
+        return getattr(self.cache[guild], role_name)
 
-    async def set_default_role(self, guild: Guild, role: Role) -> None:
+    async def set_default_role(self, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
         await self._set_role("_default", guild, role)
 
-    async def set_muted_role(self, guild: Guild, role: Role) -> None:
+    async def set_muted_role(self, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
         await self._set_role("muted", guild, role)
 
-    async def set_staff_role(self, guild: Guild, role: Role) -> None:
+    async def set_staff_role(self, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
         await self._set_role("staff", guild, role)
 
-    def get_default_role(self, guild: Guild) -> int:
+    def get_default_role(self, guild: t.Union[Guild, int]) -> int:
         role = self._get_role("_default", guild)
         if role == 0:
             role = guild.default_role
 
         return role
 
-    def get_muted_role(self, guild: Guild) -> int:
+    def get_muted_role(self, guild: t.Union[Guild, int]) -> int:
         return self._get_role("muted", guild)
 
-    def get_staff_role(self, guild: Guild) -> int:
+    def get_staff_role(self, guild: t.Union[Guild, int]) -> int:
         return self._get_role("staff", guild)
 
 
