@@ -37,10 +37,9 @@ class Sudo(Cog):
         await self.bot.close()
 
         time.sleep(1)
-
         os.system("pipenv run start")
 
-    async def _cogmanage(self, ctx: Context, process: str, extension: t.Optional[str] = None) -> None:
+    async def _manage_cog(self, ctx: Context, process: str, extension: t.Optional[str] = None) -> None:
         if not extension:
             extension = self.bot.extension_list
         else:
@@ -64,15 +63,15 @@ class Sudo(Cog):
 
     @sudo.command()
     async def load(self, ctx: Context, extension: t.Optional[str]) -> None:
-        await self._cogmanage(ctx, "load", extension)
+        await self._manage_cog(ctx, "load", extension)
 
     @sudo.command()
     async def unload(self, ctx: Context, extension: t.Optional[str]) -> None:
-        await self._cogmanage(ctx, "unload", extension)
+        await self._manage_cog(ctx, "unload", extension)
 
     @sudo.command()
     async def reload(self, ctx: Context, extension: t.Optional[str]) -> None:
-        await self._cogmanage(ctx, "reload", extension)
+        await self._manage_cog(ctx, "reload", extension)
 
     @sudo.command()
     async def stats(self, ctx: Context) -> None:
