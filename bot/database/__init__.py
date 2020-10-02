@@ -155,7 +155,7 @@ class DBTable(metaclass=Singleton):
             for col_name, record in zip(columns, entry):
                 # Convert to specified type
                 with suppress(IndexError):
-                    _type = self.col_types[col_name]
+                    _type = self.columns[col_name]
                     record = _type(record)
                 db_entry[col_name] = record
             # Store the cache model into the cache
