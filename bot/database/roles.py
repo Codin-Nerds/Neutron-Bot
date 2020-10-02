@@ -1,6 +1,5 @@
 import typing as t
 from dataclasses import dataclass
-from textwrap import dedent
 
 from discord import Guild, Role
 from loguru import logger
@@ -25,40 +24,28 @@ class Roles(DBTable):
     * `staff` role
     Under the single `serverid` column
     """
-    populate_command = dedent("""
-        CREATE TABLE IF NOT EXISTS roles (
-            serverid NUMERIC(40) UNIQUE NOT NULL,
-            _default NUMERIC(40) DEFAULT 0,
-            muted NUMERIC(40) DEFAULT 0,
-            staff NUMERIC(40) DEFAULT 0
-        )
-    """)
+    columns = {
+        "serverid": "NUMERIC(40) UNIQUE NOT NULL",
+        "_default": "NUMERIC(40) DEFAULT 0",
+        "muted": "NUMERIC(40) DEFAULT 0",
+        "staff": "NUMERIC(40) DEFAULT 0",
+    }
+    caching = {
+        "key": (int, "serverid"),
+
+        "_default": (int, 0),
+        "muted": (int, 0),
+        "staff": (int, 0)
+    }
 
     def __init__(self, bot: Bot, database: Database):
         super().__init__(database, "roles")
         self.bot = bot
         self.database = database
-        self.cache: t.Dict[int, Entry] = {}
-
-    async def __async_init__(self):
-        """
-        Obtain all database rows and populate the cache
-        with them.
-        """
-        entries = await self.db_get(columns=["serverid", "_default", "muted", "staff"])
-
-        for entry in entries:
-            lst_entry = list(entry)
-            self.cache[lst_entry[0]] = Entry(*lst_entry[1:])
 
     def update_cache(self, server_id: int, role: str, value: int) -> None:
         """Update or add roles in stored cache."""
-        if server_id in self.cache:
-            setattr(self.cache[server_id], role, value)
-        else:
-            roles = {"_default": 0, "muted": 0, "staff": 0}
-            roles.update({role: value})
-            self.cache[server_id] = self.Entry(**roles)
+        setattr(self.cache[server_id], role, value)
 
     async def _set_role(self, role_name: str, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
         """Set a `role_name` column to store `role` for the specific `guild`."""
