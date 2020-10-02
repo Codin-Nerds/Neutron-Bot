@@ -118,14 +118,17 @@ class DBTable(metaclass=Singleton):
     async def _make_cache(self) -> None:
         """
         Crate and populate basic caching model from top-level `self.caching`.
+
+        This function creates `self.cache_columns` which stores the cached columns
+        and their type together with `self.cache` which stores the actual cache.
         """
         if not hasattr(self, "caching") or not isinstance(self.caching, dict):
             logger.trace(f"Skipping defining cache for {self.__class__}, `caching` dict wasn't specified")
             return
 
-        self.columns = {}
+        self.cache_columns = {}
         cache_key_type, self._cache_key = self.caching.pop("key")
-        self.columns[self._cache_key] = cache_key_type
+        self.cache_columns[self._cache_key] = cache_key_type
 
         # Create cache model
         field_list = []
@@ -141,7 +144,7 @@ class DBTable(metaclass=Singleton):
                 _type = specification
 
             field_list.append(val)
-            self.columns[column] = _type
+            self.cache_columns[column] = _type
 
         self._cache_model = make_dataclass("Entry", field_list)
 
@@ -155,13 +158,25 @@ class DBTable(metaclass=Singleton):
             for col_name, record in zip(columns, entry):
                 # Convert to specified type
                 with suppress(IndexError):
-                    _type = self.columns[col_name]
+                    _type = self.cache_columns[col_name]
                     record = _type(record)
                 db_entry[col_name] = record
             # Store the cache model into the cache
             key = db_entry.pop(self._cache_key)
             cache_entry = self._cache_model(**db_entry)
             self.cache[key] = cache_entry
+
+    def update_cache(self, primary_value: str, update_key: str, update_value: t.Any) -> None:
+        """
+        Update the stored cache value for `update_key` on `primary_value` to given `update_value`.
+        """
+        setattr(self.cache[primary_value], update_key, update_value)
+
+    def cache_get(self, primary_value: str, attribute: str) -> t.Any:
+        """
+        Obtain the value of `attribute` stored in cache for `primary_value`
+        """
+        return getattr(self.cache[primary_value], attribute)
 
     @classmethod
     def reference(cls) -> "DBTable":
