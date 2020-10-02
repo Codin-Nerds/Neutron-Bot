@@ -43,10 +43,6 @@ class Roles(DBTable):
         self.bot = bot
         self.database = database
 
-    def update_cache(self, server_id: int, role: str, value: int) -> None:
-        """Update or add roles in stored cache."""
-        setattr(self.cache[server_id], role, value)
-
     async def _set_role(self, role_name: str, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
         """Set a `role_name` column to store `role` for the specific `guild`."""
         if isinstance(guild, Guild):
@@ -66,7 +62,7 @@ class Roles(DBTable):
         """Get a `role_name` column for specific `guild` from cache."""
         if isinstance(guild, Guild):
             guild = guild.id
-        return getattr(self.cache[guild], role_name)
+        return self.cache_get(guild, role_name)
 
     async def set_default_role(self, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
         await self._set_role("_default", guild, role)
@@ -80,7 +76,7 @@ class Roles(DBTable):
     def get_default_role(self, guild: t.Union[Guild, int]) -> int:
         role = self._get_role("_default", guild)
         if role == 0:
-            role = guild.default_role
+            role = guild.default_role.id
 
         return role
 
