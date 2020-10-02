@@ -76,7 +76,7 @@ class Timer:
         """Cancel all currently delayed tasks in this timer."""
         logger.debug(f"Aborting all delayed tasks from {self.id}")
 
-        for task in self.delayed_tasks.copy():
+        for task in self.delayed_tasks.values():
             task.cancel()
 
     async def _postpone(self, task_name: t.Hashable, coro: t.Coroutine, delay: t.Union[int, float]) -> None:
