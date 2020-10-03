@@ -157,7 +157,7 @@ class DBTable(metaclass=Singleton):
             db_entry = {}
             for col_name, record in zip(columns, entry):
                 # Convert to specified type
-                with suppress(IndexError):
+                with suppress(IndexError, TypeError):
                     _type = self.cache_columns[col_name]
                     record = _type(record)
                 db_entry[col_name] = record
