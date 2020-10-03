@@ -166,17 +166,17 @@ class DBTable(metaclass=Singleton):
             cache_entry = self._cache_model(**db_entry)
             self.cache[key] = cache_entry
 
-    def update_cache(self, primary_value: str, update_key: str, update_value: t.Any) -> None:
+    def cache_update(self, key: str, column: str, value: t.Any) -> None:
         """
         Update the stored cache value for `update_key` on `primary_value` to given `update_value`.
         """
-        setattr(self.cache[primary_value], update_key, update_value)
+        setattr(self.cache[key], column, value)
 
-    def cache_get(self, primary_value: str, attribute: str) -> t.Any:
+    def cache_get(self, key: str, column: str) -> t.Any:
         """
         Obtain the value of `attribute` stored in cache for `primary_value`
         """
-        return getattr(self.cache[primary_value], attribute)
+        return getattr(self.cache[key], column)
 
     @classmethod
     def reference(cls) -> "DBTable":
