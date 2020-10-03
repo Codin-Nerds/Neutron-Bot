@@ -123,8 +123,10 @@ Note that we end each sentence in docstrings with `.` to keep everything consist
 
 ## Database table management
 
-We use a custom way to define our database tables, this was implemented in [PR #11](https://github.com/Codin-Nerds/Neutron-Bot/pull/11).
-You can check that pull request as it explains in detail what was changed. To explain it briefly:
+We use a custom way to define our database tables, this was implemented in [PR #11](https://github.com/Codin-Nerds/Neutron-Bot/pull/11) and updated in [PR #14](https://github.com/Codin-Nerds/Neutron-Bot/pull/14)
+You can check those pull requests as they explains in detail what was added and how to use it.
+
+### Making a new table
 
 Every database table needs to have a it's own file. This file should be named by the table name (although this isn't mandatory).
 This file needs to be stored under the `bot/database` directory and it should look like this:
@@ -137,13 +139,12 @@ from bot.database import DBTable, Database
 
 
 class Roles(DBTable):
-    populate_command = """
-        CREATE TABLE IF NOT EXISTS roles (
-            serverid NUMERIC(40) UNIQUE NOT NULL,
-            staff_role NUMERIC(40) DEFAULT 0,
-            user_role NUMERIC(40) DEFAULT 0
-        )
-        """
+    columns = {
+        "serverid": "NUMERIC(40) UNIQUE NOT NULL",
+        "_default": "NUMERIC(40) DEFAULT 0",
+        "muted": "NUMERIC(40) DEFAULT 0",
+        "staff": "NUMERIC(40) DEFAULT 0",
+    }
 
     def __init__(self, bot: Bot, database: Database):
         super().__init__(database, "roles")
@@ -175,13 +176,80 @@ You can also notice the absence of `SQL` code in the `set_staff_role` and `get_s
 
 There are a total of 3 functions like this which provide the SQL abstraction layer: `DBTable.db_upsert`, `DBTable.db_get`, and `DBTable.db_set`. In case you'd need something more specific you will have to fall back to the SQL query, you can execute this query using `DBTable.db_execute(sql, [arg1, arg2])` or if you want to obtain data from the database, you can use the `DBTable.db_fetchone(sql, [arg1, arg2])` or `DBTable.db_fetch(sql, [arg1, arg2])`.
 
-The `populate_command` class attribute on the top holds the query for initial creation the table. This query will be executed automatically when the table loads.
+The `columns` class attribute on the top holds the column table structure which will be used for initial creation the table. The populate command will be executed automatically when the table loads and it will use the given sql arguments defined in the values of this dictionary.
 
 After you've created your table file, you'll need to reference it in the `db_tables` list defined in [`bot/__main__.py`](https://github.com/Codin-Nerds/Neutron-Bot/blob/master/bot/__main__.py).
 
 The table will be loaded with the bots initiation automatically.
 
-After that you're ready to use your database table functions inside of a cog, doing that is pretty simple:
+### Using caching
+
+The database system also introduces a built-in way to easily use caching for your database. This means you can use synchronous functions to read your database from cache rather than making asynchronous calls to the database itself and reading it from there. Not only does that means you don't have to use asnyc fucntions, it also makes accessing the database data faster.
+
+Even through it's advantages, there are cases where caching isn't wanted in order to prevent using up too much memory. If this is your case, you don't have to do absolutely anything, just make the database as described in the section above, but if you do want caching, just read along.
+
+In order to use caching, all you need to do is specify the `caching` class parameter, similarely to the `columns` parameter, except this one is optional. By including it the lower-level methods will automatically populate a `self.cache` dictionary for you based on your caching structure in this dictionary. This class variable looks like this:
+
+```py
+class FooTable(DBTable):
+    caching = {
+        "key": (int, "serverid"),
+
+        "_default": int,
+        "muted": (int, 0),
+        "staff": None
+    }
+   ...
+```
+
+The `"key"` is used to hold the column which will be used as a unique identifier, under which the other column values will be stored, you can think of it as the primary key for caching. This is the key you'll use to access the cache itself (`self.cache[some_serverid]`).
+
+The rest of the values follow simple syntax guidelines: the key represents the name of that column, and the value can be one of the 3 examples shown above:
+
+1. **`int`**: This value definition only provides the datatype which this column should be using. This is the type that will be used to convert the `asyncpg.Record`. in this case, the following would be stored to cache `int(specific_record)`
+2. **`(int, 0)`**: This acts similarly to the above except it also provides a default value of `0`.
+3. **`None`**: This syntax will assume the same as the one with the pure data type, but the data type will be set to `t.Any` rather than something specific. If this type is used, you'll be storing the `asyncpg.Record` instances rather than any specified data type.
+
+In order to get the values from your cache you can use 2 new getter/setter methods: `DBTable.cache_get(key, column)` and `DBTable.cache_update(key, column, value)`. Usage of these methods can be seen in a full table example here:
+
+```py
+class FooTable(DBTable):
+    columns = {
+        "serverid": "NUMERIC(40) UNIQUE NOT NULL",
+        "_default": "NUMERIC(40) DEFAULT 0",
+        "muted": "NUMERIC(40) DEFAULT 0",
+        "staff": "NUMERIC(40) DEFAULT 0",
+    }
+    caching = {
+        "key": (int, "serverid"),
+
+        "_default": (int, 0),
+        "muted": (int, 0),
+        "staff": (int, 0)
+    }
+
+    def __init__(self, bot: Bot, database: Database):
+        super().__init__(database, "roles")
+        self.bot = bot
+        self.database = database
+
+    async def _set_role(self, role_name: str, guild_id: int, role_id: int) -> None:
+        """Set a `role_name` column to store `role_id` for the specific `guild_id`."""
+        await self.db_upsert(
+            columns=["serverid", role_name],
+            values=[guild_id, role_id],
+            conflict_column="serverid"
+        )
+        self.cache_update(guild.id, role_name, role.id)  # Cache setter function
+
+    def _get_role(self, role_name: str, guild_id: int) -> int:
+        """Get a `role_name` column for specific `guild_id` from cache."""
+        return self.cache_get(guild_id, role_name)  # Cache getter function
+```
+
+### Referencing the database inside of your cogs
+
+After that you've set up your database table classes with your custom functions, you're ready to use them inside of a cog, doing that is pretty simple:
 
 ```py
 from discord.ext.commands import Cog

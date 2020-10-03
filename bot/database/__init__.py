@@ -1,6 +1,8 @@
 import typing as t
 from abc import abstractmethod
+from collections import defaultdict
 from contextlib import suppress
+from dataclasses import field, make_dataclass
 from importlib import import_module
 
 import asyncpg
@@ -34,12 +36,30 @@ class DBTable(metaclass=Singleton):
     """
     This is a basic database table structure model.
 
-    It isn't supposed to be used on it's own but rather
-    as a parent class for all database table classes.
+    This class automatically creates the initial database
+    tables accordingly to `columns` dict which is a mandantory
+    class parameter defined in the top-level class, it should
+    look like this:
+    columns = {
+        "column_name": "SQL creation syntax",
+        "example": "NUMERIC(40) UNIQUE NOT NULL"
+        ...
+    }
 
-    This class stores multiple methods to make executing SQL
-    queries easier together with the `_populate` method
-    which is here to initiate the database and create tables.
+    After the table is populated, caching will be automatically
+    set up based on the `caching` dict which is an optional class
+    parameter defined in the top-level class, if this parameter isn't
+    defined, caching will be skipped. Example for caching:
+    caching = {
+        "key": "table_name",  # This will be the key for the stored `cache` dict
+
+        # These will be the entries for the cache
+        "column_name": (python datatype, default_value),
+        "column_name2": python datatype  # default_value is optional
+    }
+
+    There are also multiple methods which serves as an abstraction
+    layer for for executing raw SQL code.
 
     There is also a special `reference` classmethod which will
     return the running instance (from the singleton model).
@@ -49,6 +69,7 @@ class DBTable(metaclass=Singleton):
         self.table = table_name
         self.pool = self.database.pool
         self.timeout = self.database.timeout
+        self.cache = {}
 
     @abstractmethod
     async def __async_init__(self) -> None:
@@ -62,15 +83,22 @@ class DBTable(metaclass=Singleton):
 
     async def _init(self) -> None:
         """
-        This method calls `__async_init__` method from top-level
-        table class and calles `_populate` which crates the
-        initial table structure accordingly to the top-level defined
-        `populate_command` sql query.
+        This method calls `_populate` and `_make_cache`
+        to make all the db tables and create the table cache.
+        After that, `__async_init__` method is called which
+        refers to top-level async initialization, if this
+        method isn't defined, nothing will happen.
+
+        This also makes sure that `columns` dictionary is
+        defined properly in the top-level class..
         """
-        with suppress(NotImplementedError):
-            await self.__async_init__()
+        if not hasattr(self, "columns") or not isinstance(self.columns, dict):
+            raise RuntimeError(f"Table {self.__class__} doesn't have a `columns` dict defined properly.")
 
         await self._populate()
+        await self._make_cache()
+        with suppress(NotImplementedError):
+            await self.__async_init__()
 
     async def _populate(self) -> None:
         """
@@ -80,13 +108,75 @@ class DBTable(metaclass=Singleton):
         This method also calls `__async_init__` method on top level table
         (if there is one).
         """
-        if not hasattr(self, "populate_command"):
-            logger.warning(f"Table {self.__class__} doesn't have a `populate_command` attribute set, skipping populating.")
-            return
+        table_structure = ",\n".join(f"{column} {sql_details}" for column, sql_details in self.columns.items())
+        populate_command = f"CREATE TABLE IF NOT EXISTS {self.table} (\n{table_structure}\n)"
 
         logger.trace(f"Populating {self.__class__}")
         async with self.pool.acquire(timeout=self.timeout) as db:
-            await db.execute(self.populate_command)
+            await db.execute(populate_command)
+
+    async def _make_cache(self) -> None:
+        """
+        Crate and populate basic caching model from top-level `self.caching`.
+
+        This function creates `self.cache_columns` which stores the cached columns
+        and their type together with `self.cache` which stores the actual cache.
+        """
+        if not hasattr(self, "caching") or not isinstance(self.caching, dict):
+            logger.trace(f"Skipping defining cache for {self.__class__}, `caching` dict wasn't specified")
+            return
+
+        self.cache_columns = {}
+        cache_key_type, self._cache_key = self.caching.pop("key")
+        self.cache_columns[self._cache_key] = cache_key_type
+
+        # Create cache model
+        field_list = []
+        for column, specification in self.caching.items():
+            if isinstance(specification, tuple):
+                val = (column, specification[0], field(default=specification[1]))
+                _type = specification[0]
+            elif specification is None:
+                val = column
+                _type = None
+            else:
+                val = (column, specification)
+                _type = specification
+
+            field_list.append(val)
+            self.cache_columns[column] = _type
+
+        self._cache_model = make_dataclass("Entry", field_list)
+
+        # Create and populate the cache
+        self.cache = defaultdict(self._cache_model)
+        columns = list(self.columns.keys())
+
+        entries = await self.db_get(columns)  # Get db entries to store
+        for entry in entries:
+            db_entry = {}
+            for col_name, record in zip(columns, entry):
+                # Convert to specified type
+                with suppress(IndexError, TypeError):
+                    _type = self.cache_columns[col_name]
+                    record = _type(record)
+                db_entry[col_name] = record
+            # Store the cache model into the cache
+            key = db_entry.pop(self._cache_key)
+            cache_entry = self._cache_model(**db_entry)
+            self.cache[key] = cache_entry
+
+    def cache_update(self, key: str, column: str, value: t.Any) -> None:
+        """
+        Update the stored cache value for `update_key` on `primary_value` to given `update_value`.
+        """
+        setattr(self.cache[key], column, value)
+
+    def cache_get(self, key: str, column: str) -> t.Any:
+        """
+        Obtain the value of `attribute` stored in cache for `primary_value`
+        """
+        return getattr(self.cache[key], column)
 
     @classmethod
     def reference(cls) -> "DBTable":
