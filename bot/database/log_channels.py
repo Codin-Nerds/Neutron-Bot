@@ -65,7 +65,7 @@ class LogChannels(DBTable):
         await self.db_upsert(
             columns=["serverid", channel_name],
             values=[guild, channel],
-            conflict_column="serverid"
+            conflict_columns=["serverid"]
         )
         self.update_cache(guild, channel_name, channel)
 

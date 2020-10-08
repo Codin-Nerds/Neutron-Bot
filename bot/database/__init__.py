@@ -268,7 +268,7 @@ class DBTable(metaclass=Singleton):
 
         await self.db_execute(sql, values)
 
-    async def db_upsert(self, columns: t.List[str], values: t.List[str], conflict_column: str) -> None:
+    async def db_upsert(self, columns: t.List[str], values: t.List[str], conflict_columns: t.List[str]) -> None:
         """
         This method serves as an abstraction layer
         from using SQL syntax in the top-level database
@@ -277,15 +277,17 @@ class DBTable(metaclass=Singleton):
         """
         sql_columns = ", ".join(columns)
         sql_values = ", ".join(f"${n + 1}" for n in range(len(values)))
+        sql_conflict_columns = ", ".join(conflict_columns)
+
         sql_update = ""
         for index, column in enumerate(columns):
-            if column != conflict_column:
+            if column not in conflict_columns:
                 sql_update += f"{column}=${index + 1}"
 
         sql = f"""
         INSERT INTO {self.table} ({sql_columns})
         VALUES ({sql_values})
-        ON CONFLICT ({conflict_column}) DO
+        ON CONFLICT ({sql_conflict_columns}) DO
         UPDATE SET {sql_update}
         """
 

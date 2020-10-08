@@ -155,7 +155,7 @@ class Roles(DBTable):
         await self.db_upsert(
             columns=["serverid", "staff_role"],
             values=[server_id, role_id],
-            conflict_column="serverid"
+            conflict_columns=["serverid"]
         )
 
     async def get_staff_role(self, server_id: int) -> asyncpg.Record:
@@ -238,7 +238,7 @@ class FooTable(DBTable):
         await self.db_upsert(
             columns=["serverid", role_name],
             values=[guild_id, role_id],
-            conflict_column="serverid"
+            conflict_columns=["serverid"]
         )
         self.cache_update(guild.id, role_name, role.id)  # Cache setter function
 

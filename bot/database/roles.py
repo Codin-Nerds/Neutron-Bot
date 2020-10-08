@@ -54,7 +54,7 @@ class Roles(DBTable):
         await self.db_upsert(
             columns=["serverid", role_name],
             values=[guild, role],
-            conflict_column="serverid"
+            conflict_columns=["serverid"]
         )
         self.update_cache(guild.id, role_name, role.id)
 
