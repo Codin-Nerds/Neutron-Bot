@@ -67,7 +67,7 @@ class LogChannels(DBTable):
             values=[guild, channel],
             conflict_columns=["serverid"]
         )
-        self.update_cache(guild, channel_name, channel)
+        self.cache_update(guild, channel_name, channel)
 
     def _get_channel(self, channel_name: str, guild: t.Union[Guild, int]) -> int:
         """Get a `role_name` column for specific `guild` from cache."""
