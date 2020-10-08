@@ -184,11 +184,11 @@ The table will be loaded with the bots initiation automatically.
 
 ### Using caching
 
-The database system also introduces a built-in way to easily use caching for your database. This means you can use synchronous functions to read your database from cache rather than making asynchronous calls to the database itself and reading it from there. Not only does that means you don't have to use asnyc fucntions, it also makes accessing the database data faster.
+The database system also introduces a built-in way to easily use caching for your database. This means you can use synchronous functions to read your database from cache rather than making asynchronous calls to the database itself and reading it from there. Not only does that means you don't have to use async functions, it also makes accessing the database data faster.
 
 Even through it's advantages, there are cases where caching isn't wanted in order to prevent using up too much memory. If this is your case, you don't have to do absolutely anything, just make the database as described in the section above, but if you do want caching, just read along.
 
-In order to use caching, all you need to do is specify the `caching` class parameter, similarely to the `columns` parameter, except this one is optional. By including it the lower-level methods will automatically populate a `self.cache` dictionary for you based on your caching structure in this dictionary. This class variable looks like this:
+In order to use caching, all you need to do is specify the `caching` class parameter, similarly to the `columns` parameter, except this one is optional. By including it the lower-level methods will automatically populate a `self.cache` dictionary for you based on your caching structure in this dictionary. This class variable looks like this:
 
 ```py
 class FooTable(DBTable):
