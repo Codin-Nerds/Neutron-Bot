@@ -11,6 +11,7 @@ PREFIX = config.COMMAND_PREFIX
 extensions = [
     "bot.cogs.moderation.lock",
     "bot.cogs.sudo",
+    "bot.cogs.embeds"
 ]
 db_tables = [
     "bot.database.roles"
