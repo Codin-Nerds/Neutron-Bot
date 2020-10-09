@@ -6,7 +6,7 @@ from contextlib import suppress
 
 from discord import Color, Embed, Forbidden, Member, TextChannel
 from discord.errors import HTTPException
-from discord.ext.commands import Cog, ColourConverter, Context, group
+from discord.ext.commands import Cog, ColourConverter, Context, group, MessageConverter
 
 from bot.core.bot import Bot
 from bot.core.converters import Unicode
@@ -302,7 +302,13 @@ class Embeds(Cog):
             await ctx.send(f"Embeds field **#{ID}** doesn't exist.")
 
     # endregion
-    # region: json
+    # region: json, messageload
+
+    @embed_group.command(name="frommessage", aliases=["loadmessage"])
+    async def from_message(self, ctx: Context, message: MessageConverter) -> None:
+        embed = message.embeds[0]
+        self.embeds[ctx.author] = EmbedData("", embed)
+        await ctx.send("Embed loaded from message")
 
     @embed_group.command(aliases=["json_load", "from_json", "json", "import"])
     async def load(self, ctx: Context, *, json_code: str) -> None:
