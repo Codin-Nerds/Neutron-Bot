@@ -20,19 +20,19 @@ class RolesSetup(Cog):
 
     @command(aliases=["staffrole"])
     async def staff_role(self, ctx: Context, role: RoleConverter) -> None:
-        """Handle the server setup."""
+        """Setup the staff role."""
         await self.roles_db.set_staff_role(ctx.guild, role)
         await ctx.send(":white_check_mark: Role updated.")
 
     @command(aliases=["mutedrole"])
     async def muted_role(self, ctx: Context, role: RoleConverter) -> None:
-        """Handle the server setup."""
+        """Setup the muted role."""
         await self.roles_db.set_muted_role(ctx.guild, role)
         await ctx.send(":white_check_mark: Role updated.")
 
     @command(aliases=["showroles"])
     async def show_roles(self, ctx: Context) -> None:
-        """Show saved roles for this server."""
+        """Show configured roles in the server."""
         default = ctx.guild.get_role(self.roles_db.get_default_role(ctx.guild))
         staff = ctx.guild.get_role(self.roles_db.get_staff_role(ctx.guild))
         muted = ctx.guild.get_role(self.roles_db.get_muted_role(ctx.guild))
