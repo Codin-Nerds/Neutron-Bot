@@ -155,7 +155,7 @@ class DBTable(metaclass=Singleton):
         entries = await self.db_get(columns)  # Get db entries to store
         for entry in entries:
             db_entry = {}
-            for col_name, record in zip(columns, entry):
+            for col_name, record in zip(columns, *iter(entry)):
                 # Convert to specified type
                 with suppress(IndexError, TypeError):
                     _type = self.cache_columns[col_name]
@@ -243,9 +243,9 @@ class DBTable(metaclass=Singleton):
         table class, it runs the basic selection (get)
         query without needing to use SQL syntax at all.
         """
-        sql = f"SELECT {' ,'.join(columns)} FROM {self.table}"
+        sql = f"SELECT ({', '.join(columns)}) FROM {self.table}"
         if specification:
-            sql += f" WHERE {specification}"
+            sql += f" WHERE ({specification})"
 
         if len(columns) == 1:
             return await self.db_fetchone(sql, sql_args)
