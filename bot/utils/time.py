@@ -24,6 +24,7 @@ def stringify_reldelta(rel_delta: relativedelta, min_unit: str = "seconds") -> s
     you'd get:
     `1 year 2 months 2 weeks and 5 days`
     """
+    rel_delta = rel_delta.normalized()
     time_dict = {
         "years": rel_delta.years,
         "months": rel_delta.months,
@@ -76,7 +77,8 @@ def stringify_timedelta(time_delta: timedelta, min_unit: str = "seconds") -> str
     you'd get:
     `1 year 2 months 2 weeks and 5 days`
     """
-    rel_delta = relativedelta(microseconds=time_delta.total_seconds() * 1000000)
+    now = datetime.now()
+    rel_delta = relativedelta(now + time_delta, now)
     return stringify_reldelta(rel_delta, min_unit=min_unit)
 
 
@@ -100,7 +102,8 @@ def stringify_duration(duration: int, min_unit: str = "seconds") -> str:
     you'd get:
     `1 year 2 months 2 weeks and 5 days`
     """
-    rel_delta = relativedelta(microseconds=duration * 1000000)
+    now = datetime.now()
+    rel_delta = relativedelta(now + timedelta(seconds=duration), now)
     return stringify_reldelta(rel_delta, min_unit=min_unit)
 
 
