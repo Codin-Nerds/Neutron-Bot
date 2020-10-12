@@ -1,3 +1,6 @@
+import textwrap
+
+from discord import Embed, Role
 from discord.ext.commands import Cog, Context, RoleConverter, command
 
 from bot.core.bot import Bot
@@ -23,6 +26,33 @@ class RolesSetup(Cog):
     async def muted_role(self, ctx: Context, role: RoleConverter) -> None:
         """Handle the server setup."""
         await self.roles_db.set_muted_role(ctx.guild, role)
+
+    @command(aliases=["showroles"])
+    async def show_roles(self, ctx: Context) -> None:
+        """Show saved roles for this server."""
+        default = ctx.guild.get_role(self.roles_db.get_default_role(ctx.guild))
+        staff = ctx.guild.get_role(self.roles_db.get_staff_role(ctx.guild))
+        muted = ctx.guild.get_role(self.roles_db.get_muted_role(ctx.guild))
+
+        if isinstance(default, Role):
+            default = default.mention
+        if isinstance(staff, Role):
+            staff = staff.mention
+        if isinstance(muted, Role):
+            muted = muted.mention
+
+        embed = Embed(
+            title="Configured role settings",
+            description=textwrap.dedent(
+                f"""
+                Default role: {default}
+                Staff role: {staff}
+                Muted role: {muted}
+                """
+            )
+        )
+
+        await ctx.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:
