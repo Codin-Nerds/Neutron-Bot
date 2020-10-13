@@ -13,6 +13,7 @@ extensions = [
     "bot.cogs.setup.roles",
     "bot.cogs.setup.permissions",
     "bot.cogs.sudo",
+    "bot.cogs.embeds"
 ]
 db_tables = [
     "bot.database.roles",
