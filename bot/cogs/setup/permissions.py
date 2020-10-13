@@ -23,6 +23,7 @@ class PermissionsSetup(Cog):
         the ban time for role higher in the hierarchy will be preferred.
         """
         await self.permissions_db.set_bantime(ctx.guild, role, duration)
+        await ctx.send(":white_check_mark: Permissions updated.")
 
     @command(aliases=["mutetime"])
     async def mute_time(self, ctx: Context, role: RoleConverter, duration: Duration) -> None:
@@ -33,6 +34,7 @@ class PermissionsSetup(Cog):
         the mute time for role higher in the hierarchy will be preferred.
         """
         await self.permissions_db.set_mutetime(ctx.guild, role, duration)
+        await ctx.send(":white_check_mark: Permissions updated.")
 
     @command(aliases=["locktime"])
     async def lock_time(self, ctx: Context, role: RoleConverter, duration: Duration) -> None:
@@ -43,6 +45,7 @@ class PermissionsSetup(Cog):
         the lock time for role higher in the hierarchy will be preferred.
         """
         await self.permissions_db.set_locktime(ctx.guild, role, duration)
+        await ctx.send(":white_check_mark: Permissions updated.")
 
     @command(aliases=["showpermissions"])
     async def show_permissions(self, ctx: Context, role: RoleConverter) -> None:
