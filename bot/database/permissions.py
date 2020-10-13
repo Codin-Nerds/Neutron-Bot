@@ -85,7 +85,7 @@ class Permissions(DBTable):
             identifier = guild.get_member(user.id)
 
         if isinstance(identifier, Member):
-            if identifier.guild_permissions().administrator:
+            if identifier.guild_permissions.administrator:
                 return None
 
             # Follow role hierarchy from most important role to everyone
