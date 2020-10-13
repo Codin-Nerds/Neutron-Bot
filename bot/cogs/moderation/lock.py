@@ -4,12 +4,13 @@ from collections import defaultdict
 
 from dateutil.relativedelta import relativedelta
 from discord import TextChannel
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import Cog, Context, MissingPermissions, command
 from loguru import logger
 
 from bot.core.bot import Bot
 from bot.core.converters import Duration
 from bot.core.timer import Timer
+from bot.database.permissions import Permissions
 from bot.database.roles import Roles
 from bot.utils.time import stringify_reldelta
 
@@ -20,6 +21,7 @@ class Lock(Cog):
         self.locked_channels = defaultdict(set)
         self.timer = Timer("channel_lock")
         self.roles_db: Roles = Roles.reference()
+        self.permissions_db: Permissions = Permissions.reference()
 
     async def _lock(self, channel: TextChannel) -> bool:
         """
@@ -64,6 +66,14 @@ class Lock(Cog):
         Disallow everyones permission to talk in this channel
         for given `duration` or indefinitely.
         """
+        max_duration = await self.permissions_db.get_locktime(ctx.guild, ctx.author)
+
+        if any([
+            not duration and max_duration is not None,
+            duration and max_duration is not None and duration > max_duration
+        ]):
+            raise MissingPermissions(["sufficient_locktime"])
+
         logger.debug(f"Channel #{ctx.channel} was silenced by {ctx.author}.")
 
         if not await self._lock(ctx.channel):
