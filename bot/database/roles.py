@@ -54,9 +54,9 @@ class Roles(DBTable):
         await self.db_upsert(
             columns=["serverid", role_name],
             values=[guild, role],
-            conflict_column="serverid"
+            conflict_columns=["serverid"]
         )
-        self.update_cache(guild.id, role_name, role.id)
+        self.cache_update(guild, role_name, role)
 
     def _get_role(self, role_name: str, guild: t.Union[Guild, int]) -> int:
         """Get a `role_name` column for specific `guild` from cache."""
