@@ -86,13 +86,13 @@ class Permissions(DBTable):
 
         if isinstance(identifier, Member):
             if identifier.guild_permissions.administrator:
-                return None
+                return -1
 
             # Follow role hierarchy from most important role to everyone
             # and use the first found time, if non is found, return `None`
             for role in identifier.roles[::-1]:
                 time = await self._get_permission(time_permission, guild, role)
-                if time:
+                if time is not None and time != 0:
                     return time
             else:
                 return None
@@ -100,14 +100,23 @@ class Permissions(DBTable):
         if isinstance(identifier, Role):
             return await self._get_permission(time_permission, guild, identifier)
 
-    async def set_bantime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: int) -> None:
-        await self._set_permission("bantime", guild, role, value)
+    async def _set_time(self, time_permission: str, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Union[int, float]) -> None:
+        if value == float("inf"):
+            value = -1
 
-    async def set_mutetime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: int) -> None:
-        await self._set_permission("mutetime", guild, role, value)
+        if not isinstance(value, int):
+            return RuntimeError(f"value must be an integer, got {type(value)}: {value}")
 
-    async def set_locktime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: int) -> None:
-        await self._set_permission("locktime", guild, role, value)
+        await self._set_permission(time_permission, guild, role, value)
+
+    async def set_bantime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Union[int, float]) -> None:
+        await self._set_time("bantime", guild, role, value)
+
+    async def set_mutetime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Union[int, float]) -> None:
+        await self._set_time("mutetime", guild, role, value)
+
+    async def set_locktime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Union[int, float]) -> None:
+        await self._set_time("locktime", guild, role, value)
 
     async def get_bantime(self, guild: t.Union[Guild, int], identifier: t.Union[Member, Role, int]) -> t.Optional[int]:
         return await self._get_time("bantime", guild, identifier)

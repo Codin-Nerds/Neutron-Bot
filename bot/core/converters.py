@@ -133,6 +133,9 @@ class Duration(TimeDelta):
         super `TimeDelta` converter. After that, simply change
         the relative delta into the amount of seconds it represents.
         """
+        if duration in ["-1", "inf", "infinite", "infinity"]:
+            return float("inf")
+
         delta = await super().convert(ctx, duration)
 
         now = datetime.utcnow()

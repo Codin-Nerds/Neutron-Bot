@@ -66,11 +66,14 @@ class Lock(Cog):
         Disallow everyones permission to talk in this channel
         for given `duration` or indefinitely.
         """
+        if duration == float("inf"):
+            duration = None
+
         max_duration = await self.permissions_db.get_locktime(ctx.guild, ctx.author)
 
         if any([
-            not duration and max_duration is not None,
-            duration and max_duration is not None and duration > max_duration
+            not duration and max_duration != -1,
+            duration and max_duration != -1 and duration > max_duration
         ]):
             raise MissingPermissions(["sufficient_locktime"])
 
