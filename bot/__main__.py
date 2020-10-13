@@ -10,10 +10,13 @@ PREFIX = config.COMMAND_PREFIX
 
 extensions = [
     "bot.cogs.moderation.lock",
+    "bot.cogs.setup.roles",
+    "bot.cogs.setup.permissions",
     "bot.cogs.sudo",
 ]
 db_tables = [
-    "bot.database.roles"
+    "bot.database.roles",
+    "bot.database.permissions",
 ]
 
 bot = Bot(

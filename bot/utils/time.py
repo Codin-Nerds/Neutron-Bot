@@ -24,6 +24,7 @@ def stringify_reldelta(rel_delta: relativedelta, min_unit: str = "seconds") -> s
     you'd get:
     `1 year 2 months 2 weeks and 5 days`
     """
+    rel_delta = rel_delta.normalized()
     time_dict = {
         "years": rel_delta.years,
         "months": rel_delta.months,
@@ -76,7 +77,33 @@ def stringify_timedelta(time_delta: timedelta, min_unit: str = "seconds") -> str
     you'd get:
     `1 year 2 months 2 weeks and 5 days`
     """
-    rel_delta = relativedelta(microseconds=time_delta.total_seconds() * 1000000)
+    now = datetime.now()
+    rel_delta = relativedelta(now + time_delta, now)
+    return stringify_reldelta(rel_delta, min_unit=min_unit)
+
+
+def stringify_duration(duration: int, min_unit: str = "seconds") -> str:
+    """
+    Convert `duration` in seconds into a readable time string
+
+    `min_unit` is used to specify the printed precision,
+    aviable precision levels are:
+    * `years`
+    * `months`
+    * `weeks`
+    * `days`
+    * `hours`
+    * `minutes`
+    * `seconds`
+    * `microseconds`
+    These let you determine which unit will be the last one,
+    for example with precision of `days` from:
+    `1 year 2 months 2 weeks 5 days 4 hours 2 minutes and 1 second`
+    you'd get:
+    `1 year 2 months 2 weeks and 5 days`
+    """
+    now = datetime.now()
+    rel_delta = relativedelta(now + timedelta(seconds=duration), now)
     return stringify_reldelta(rel_delta, min_unit=min_unit)
 
 
