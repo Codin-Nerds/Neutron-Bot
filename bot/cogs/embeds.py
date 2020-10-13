@@ -6,7 +6,7 @@ from contextlib import suppress
 
 from discord import Color, Embed, Forbidden, Member, TextChannel
 from discord.errors import HTTPException
-from discord.ext.commands import Cog, ColourConverter, Context, group, MessageConverter
+from discord.ext.commands import Cog, ColourConverter, Context, MessageConverter, group
 
 from bot.core.bot import Bot
 from bot.core.converters import Unicode
