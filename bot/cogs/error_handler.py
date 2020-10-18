@@ -63,7 +63,8 @@ class ErrorHandler(Cog):
             await self.handle_user_input_error(ctx, exception)
             return
         elif isinstance(exception, errors.CommandNotFound):
-            await self.handle_command_not_found(ctx, exception)
+            # Ignore command not found due to possibility of other bots with the
+            # same command prefix
             return
         elif isinstance(exception, errors.CheckFailure):
             await self.handle_check_failure(ctx, exception)
@@ -110,9 +111,6 @@ class ErrorHandler(Cog):
                 """
             )
         )
-
-    async def handle_command_not_found(self, ctx: Context, exception: errors.CommandNotFound) -> None:
-        await self.send_unhandled_embed(ctx, exception)
 
     async def handle_check_failure(self, ctx: Context, exception: errors.CheckFailure) -> None:
         await self.send_unhandled_embed(ctx, exception)
