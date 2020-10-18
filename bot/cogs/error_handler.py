@@ -79,6 +79,8 @@ class ErrorHandler(Cog):
                 return
 
             await self.send_unhandled_embed(ctx, original_exception)
+            # Raise the original exception to show the traceback
+            raise original_exception
             return
 
         await self.send_unhandled_embed(ctx, exception)
