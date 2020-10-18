@@ -53,7 +53,11 @@ class ErrorHandler(Cog):
         1. `UserInputError`: references `handle_user_input_error`
         2. `CommandNotFound`: references `handle_command_not_found`
         3. `CheckFailure`: references `handle_command_not_found`
-        4. Otherwise, send unhandled error embed with `send_unhandled_embed`
+        4. `CommandInvokeError`: this error is raised when any unknown exception
+        was raised in a command, it references `send_unhandled_embed` with the specific
+        exception which has occurred in the command in case it doesn't match the more
+        specific filters.
+        5. Otherwise, send unhandled error embed with `send_unhandled_embed`
         """
         if isinstance(exception, errors.UserInputError):
             await self.handle_user_input_error(ctx, exception)
