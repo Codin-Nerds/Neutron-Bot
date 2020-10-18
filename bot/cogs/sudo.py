@@ -105,12 +105,6 @@ class Sudo(Cog):
         if ctx.author.id in config.devs:
             return True
 
-        await ctx.send(
-            embed=Embed(
-                description="❌ Sorry, this command is reserved for bot owners",
-                color=Color.red()
-            )
-        )
         return False
 
 
