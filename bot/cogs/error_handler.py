@@ -83,7 +83,33 @@ class ErrorHandler(Cog):
         await self.send_unhandled_embed(ctx, exception)
 
     async def handle_user_input_error(self, ctx: Context, exception: errors.UserInputError) -> None:
-        await self.send_unhandled_embed(ctx, exception)
+        command = ctx.command
+        parent = command.full_parent_name
+
+        command_name = str(command) if not parent else f"{parent} {command.name}"
+        command_syntax = f"```{command_name} {command.signature}```"
+
+        aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
+        aliases = ", ".join(sorted(aliases))
+
+        command_help = f"*{command.help or 'No description provided.'}*"
+
+        await self._send_error_embed(
+            ctx,
+            title="Invalid command syntax",
+            description=textwrap.dedent(
+                f"""
+                Your command usage is incorrect: **{exception}**
+
+                **Command syntax**
+                {command_syntax}
+                **Command Description**
+                {command_help}
+
+                {f"Aliases: {aliases}" if aliases else None}
+                """
+            )
+        )
 
     async def handle_command_not_found(self, ctx: Context, exception: errors.CommandNotFound) -> None:
         await self.send_unhandled_embed(ctx, exception)
@@ -106,7 +132,7 @@ class ErrorHandler(Cog):
                 f"""
                 ```
                 {exception.lines[exception.lineno - 1]}
-                {"" * (int(exception.colno) - 1)}^
+                {" " * (int(exception.colno) - 1)}^
                 ```
                 """
             )
