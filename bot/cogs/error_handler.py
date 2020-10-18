@@ -113,7 +113,10 @@ class ErrorHandler(Cog):
         )
 
     async def handle_check_failure(self, ctx: Context, exception: errors.CheckFailure) -> None:
-        await self.send_unhandled_embed(ctx, exception)
+        await self._send_error_embed(
+            ctx,
+            description="❌ You don't have permission to run this command"
+        )
 
     async def handle_json_decode_error(self, ctx: Context, exception: JSONDecodeError) -> None:
         msg = textwrap.dedent(
