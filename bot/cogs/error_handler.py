@@ -16,13 +16,13 @@ class ErrorHandler(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def _send_error_embed(self, ctx: Context, title: t.Optional[str], description: t.Optional[str]) -> None:
+    async def _send_error_embed(self, ctx: Context, title: t.Optional[str] = None, description: t.Optional[str] = None) -> None:
         embed = Embed(
             title=title,
             description=description,
             color=Color.red()
         )
-        await ctx.send(embed=embed)
+        await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
 
     async def send_unhandled_embed(self, ctx: Context, exception: errors.CommandError) -> None:
         logger.warning(
@@ -83,13 +83,13 @@ class ErrorHandler(Cog):
         await self.send_unhandled_embed(ctx, exception)
 
     async def handle_user_input_error(self, ctx: Context, exception: errors.UserInputError) -> None:
-        await self.handle_check_failure(ctx, exception)
+        await self.send_unhandled_embed(ctx, exception)
 
     async def handle_command_not_found(self, ctx: Context, exception: errors.CommandNotFound) -> None:
-        pass
+        await self.send_unhandled_embed(ctx, exception)
 
     async def handle_check_failure(self, ctx: Context, exception: errors.CheckFailure) -> None:
-        pass
+        await self.send_unhandled_embed(ctx, exception)
 
     async def handle_json_decode_error(self, ctx: Context, exception: JSONDecodeError) -> None:
         msg = textwrap.dedent(
@@ -111,24 +111,23 @@ class ErrorHandler(Cog):
                 """
             )
 
-        embed = Embed(
-            description=msg,
-            color=Color.red(),
-        )
-        await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
+        await self._send_error_embed(ctx, description=msg)
 
     async def handle_invalid_embed(self, ctx: Context, exception: InvalidEmbed) -> None:
-        embed = Embed(
-            description=textwrap.dedent(
-                f"""
-                Your embed isn't valid:
-                ```{exception.message}```
-                """
-            ),
-            color=Color.red(),
+        msg = textwrap.dedent(
+            f"""
+            Your embed isn't valid:
+            ```{exception.message}```
+
+            Discord error code: `{exception.discord_code}`
+            API Response: `{exception.status_code}: {exception.status_text}`
+            """
         )
-        embed.set_footer(text=f"Error code: {exception.discord_code}, API Response: {exception.status_code}: {exception.status_text}")
-        await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
+
+        await self._send_error_embed(
+            ctx,
+            description=msg
+        )
 
 
 def setup(bot: Bot) -> None:
