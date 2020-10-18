@@ -25,7 +25,7 @@ class ErrorHandler(Cog):
         await ctx.send(embed=embed)
 
     async def send_unhandled_embed(self, ctx: Context, exception: errors.CommandError) -> None:
-        logger.debug(
+        logger.warning(
             f"Exception {exception.__repr__()} has occurred from "
             f"message {ctx.message.content} invoked by {ctx.author.id} on {ctx.guild.id}"
         )
