@@ -268,6 +268,13 @@ class HelpCommand(BaseHelpCommand):
         if length > MAX_CHARACTERS:
             return HelpPages.split_cog_commands(fields, initial_embed=embed)
 
+        for fld in fields:
+            embed.add_field(
+                name=fld.name,
+                value=fld.value,
+                inline=False
+            )
+
         return embed
 
     async def send_bot_help(self, mapping: t.Dict[t.Optional[Cog], t.List[Command]]) -> None:
