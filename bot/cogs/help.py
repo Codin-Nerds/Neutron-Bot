@@ -1,34 +1,21 @@
 import textwrap
 import typing as t
+from collections import namedtuple
 
 from discord import Color, Embed
 from discord.ext.commands import Cog, Command, Group, HelpCommand as BaseHelpCommand
 from discord.ext.commands.errors import CheckFailure
-from discord.ext.menus import ListPageSource, Menu, MenuPages
 
 from bot.core.bot import Bot
+from bot.utils.pages import EmbedPages
+
+MAX_CHARACTERS = 400
+field = namedtuple("field", ("name", "value"))
 
 
-class HelpPages(ListPageSource):
-    def __init__(self, embeds: t.List[Embed]):
-        super().__init__(embeds, per_page=1)
-
-    async def format_page(self, menu: Menu, embed: Embed) -> Embed:
-        """Return the stored embed for current page."""
-        return embed
-
-    @classmethod
-    def split_messages(
-        cls,
-        messages: t.List[str],
-        initial_embed: t.Optional[Embed] = None,
-        max_characters: int = 1024,
-    ) -> "HelpPages":
-        """
-        Automatically split the given message into multiple embeds.
-
-        Return an instance of this class with these embeds set as entries for the menu
-        """
+class HelpPages(EmbedPages):
+    @staticmethod
+    def _split_messages(messages: t.List[str], initial_length: int = 0) -> t.List[str]:
         split_messages = []
         index = 0
         for message in messages:
@@ -38,7 +25,12 @@ class HelpPages(ListPageSource):
                 stored_msg = ""
                 split_messages.append(stored_msg)
 
-            if len(stored_msg + message) > max_characters:
+            length = len(stored_msg + message)
+
+            if index == 0:
+                length -= initial_length
+
+            if length > MAX_CHARACTERS:
                 index += 1
 
             try:
@@ -46,19 +38,102 @@ class HelpPages(ListPageSource):
             except IndexError:
                 split_messages.append(message)
 
-        embeds = []
-        if initial_embed:
-            embeds.append(initial_embed)
+        return split_messages
 
-        for page, message in enumerate(split_messages):
+    @staticmethod
+    def _split_fields(fields: t.List[field], initial_length: int = 0) -> t.List[t.List[field]]:
+        split_fields = []
+        index = 0
+        for fld in fields:
+            try:
+                stored_fields = split_fields[index]
+            except IndexError:
+                stored_fields = []
+                split_fields.append(stored_fields)
+
+            length = 0
+            for stored_fld in stored_fields:
+                length += len(stored_fld.name) + len(stored_fld.value)
+            length += len(fld.name) + len(fld.value)
+
+            if index == 0:
+                length -= initial_length
+
+            if length > MAX_CHARACTERS:
+                index += 1
+
+            try:
+                split_fields[index].append(fld)
+            except IndexError:
+                split_fields.append([fld])
+
+        return split_fields
+
+    @staticmethod
+    def _make_group_embeds(split_messages: t.List[str], initial_embed: Embed) -> t.List[Embed]:
+        embeds = []
+        initial_embed.add_field(
+            name="Subcommands:",
+            value=split_messages[0]
+        )
+        embeds.append(initial_embed)
+
+        for page, message in enumerate(split_messages[1:]):
             embeds.append(
                 Embed(
-                    title=f"Page listing: {page + 1}",
+                    title=f"{initial_embed.title} {page + 2}",
                     description=message,
                     color=Color.blue()
                 )
             )
 
+        initial_embed.title = f"{initial_embed.title} 1"
+
+        return embeds
+
+    @staticmethod
+    def _make_cog_embeds(fields: t.List[t.List[field]], initial_embed: Embed) -> t.List[Embed]:
+        embeds = []
+        for fld in fields[0]:
+            initial_embed.add_field(
+                name=fld.name,
+                value=fld.value,
+                inline=False
+            )
+        embeds.append(initial_embed)
+
+        for page, page_fields in enumerate(fields[1:]):
+            embed = Embed(
+                title=f"{initial_embed.title} {page + 2}",
+                color=Color.blue()
+            )
+            for fld in page_fields:
+                embed.add_field(
+                    name=fld.name,
+                    value=fld.value,
+                    inline=False
+                )
+            embeds.append(embed)
+
+        initial_embed.title = f"{initial_embed.title} 1"
+
+        return embeds
+
+    @classmethod
+    def split_group_commands(cls, cmd_messages: t.List[str], initial_embed: Embed) -> "HelpPages":
+        """
+        Automatically split the given group command messages into multiple embeds.
+
+        Return an instance of this class with these embeds set as entries for the menu
+        """
+        split_messages = cls._split_messages(cmd_messages, len(initial_embed.description))
+        embeds = cls._make_group_embeds(split_messages, initial_embed)
+        return cls(embeds)
+
+    @classmethod
+    def split_cog_commands(cls, fields: t.List[field], initial_embed: Embed) -> "HelpPages":
+        split_fields = cls._split_fields(fields, len(initial_embed.description))
+        embeds = cls._make_cog_embeds(split_fields, initial_embed)
         return cls(embeds)
 
 
@@ -132,10 +207,10 @@ class HelpCommand(BaseHelpCommand):
 
         message = "".join(messages)
 
-        # In case the message is too long (discord embed field limit is 1024)
+        # In case the message is too long
         # Split it into multiple embeds and return `HelpPages` menus object
-        if len(message) > 1024:
-            return HelpPages.split_messages(messages)
+        if len(message) > MAX_CHARACTERS:
+            return HelpPages.split_group_commands(messages, initial_embed=embed)
 
         embed.add_field(
             name="Subcommands:",
@@ -145,7 +220,7 @@ class HelpCommand(BaseHelpCommand):
 
         return embed
 
-    async def _format_cog(self, cog: t.Optional[Cog], commands: t.Optional[t.List[Command]] = None) -> Embed:
+    async def _format_cog(self, cog: t.Optional[Cog], commands: t.Optional[t.List[Command]] = None) -> t.Union[Embed, HelpPages]:
         """
         Format a help embed message for the given `cog`.
 
@@ -175,18 +250,23 @@ class HelpCommand(BaseHelpCommand):
         if commands is None:
             commands = await self.filter_commands(cog.get_commands())
 
+        fields = []
         for command in commands:
-            parent = command.full_parent_name
+            _, command_syntax, command_help, _ = await self._describe_command(command)
 
-            command_name = str(command) if not parent else f"{parent} {command.name}"
-            command_syntax = f"{self.context.prefix}{command_name} {command.signature}"
-            command_help = f"{command.help or 'No description provided.'}"
-
-            embed.add_field(
-                name=f"**`{command_syntax}`**",
-                value=command_help,
-                inline=False,
+            fields.append(
+                field(
+                    name=f"**`{command_syntax}`**",
+                    value=command_help,
+                )
             )
+
+        length = 0
+        for fld in fields:
+            length += len(fld.name) + len(fld.value)
+
+        if length > MAX_CHARACTERS:
+            return HelpPages.split_cog_commands(fields, initial_embed=embed)
 
         return embed
 
@@ -200,29 +280,39 @@ class HelpCommand(BaseHelpCommand):
         for cog in sorted_cogs:
             commands = await self.filter_commands(mapping[cog])
             if commands:
-                cog_embeds.append(await self._format_cog(cog, commands))
+                formatted_help = await self._format_cog(cog, commands)
+                if isinstance(formatted_help, HelpPages):
+                    cog_embeds += formatted_help.embeds
+                else:
+                    cog_embeds.append(formatted_help)
 
-        pages = MenuPages(
-            source=HelpPages(cog_embeds),
+        pages = EmbedPages(cog_embeds)
+        await pages.start(
+            self.context,
             clear_reactions_after=True
         )
-        await pages.start(self.context)
 
     async def send_cog_help(self, cog: Cog) -> None:
         """Send help for specific cog."""
-        embed = await self._format_cog(cog)
-        await self.context.send(embed=embed)
+        formatted_help = await self._format_cog(cog)
+
+        if isinstance(formatted_help, EmbedPages):
+            await formatted_help.start(
+                self.context,
+                clear_reactions_after=True
+            )
+        else:
+            await self.context.send(embed=formatted_help)
 
     async def send_group_help(self, group: Group) -> None:
         """Send help for specific group."""
         formatted_help = await self._format_group(group)
 
-        if isinstance(formatted_help, HelpPages):
-            pages = MenuPages(
-                source=formatted_help,
+        if isinstance(formatted_help, EmbedPages):
+            await formatted_help.start(
+                self.context,
                 clear_reactions_after=True
             )
-            await pages.start(self.context)
         else:
             await self.context.send(embed=formatted_help)
 
