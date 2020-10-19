@@ -2,7 +2,7 @@ import textwrap
 import typing as t
 
 from discord import Color, Embed
-from discord.ext.commands import Cog, Command, HelpCommand as OriginalHelpCommand
+from discord.ext.commands import Cog, Command, Group, HelpCommand as BaseHelpCommand
 from discord.ext.menus import ListPageSource, Menu, MenuPages
 
 from bot.core.bot import Bot
@@ -17,26 +17,32 @@ class HelpPages(ListPageSource):
         return embed
 
 
-class HelpCommand(OriginalHelpCommand):
+class HelpCommand(BaseHelpCommand):
     """The help command implementation."""
 
     def __init__(self):
         super().__init__(command_attrs={"help": "Shows help for given command / all commands"})
 
-    async def _fromat_command(self, command: Command) -> Embed:
-        """Format a help embed message for given `command`."""
+    async def _describe_command(self, command: Command) -> t.Tuple[str, str, str, str]:
         parent = command.full_parent_name
 
         command_name = str(command) if not parent else f"{parent} {command.name}"
         command_syntax = f"{self.context.prefix}{command_name} {command.signature}"
 
-        aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
-        aliases = ", ".join(sorted(aliases))
-
         if await command.can_run(self.context):
             command_help = f"{command.help or 'No description provided.'}"
         else:
-            command_help += "*You don't have permission to use this command.*"
+            command_help = "You don't have permission to use this command."
+
+        aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
+        aliases = ", ".join(sorted(aliases))
+
+        return command_name, command_syntax, command_help, aliases
+
+    async def _fromat_command(self, command: Command) -> Embed:
+        """Format a help embed message for given `command`."""
+
+        command_name, command_syntax, command_help, aliases = await self._describe_command(command)
 
         embed = Embed(
             title="Command Help",
@@ -58,11 +64,44 @@ class HelpCommand(OriginalHelpCommand):
 
         return embed
 
+    async def _format_group(self, group: Group) -> Embed:
+        """Format a help embed message for giver `group`."""
+        subcommands = group.commands
+
+        # If a group doesn't have any subcommands, treat it as a group
+        if len(subcommands) == 0:
+            await self.send_command_help(group)
+
+        subcommands = await self.filter_commands(subcommands, sort=True)
+
+        embed = await self._fromat_command(group)
+
+        message = ""
+        for subcommand in subcommands:
+            _, command_syntax, command_help, _ = await self._describe_command(subcommand)
+            message += textwrap.dedent(
+                f"""
+                `{command_syntax}`
+                *{command_help}*
+                """
+            )
+
+        embed.add_field(
+            name="Subcommands:",
+            value=message,
+            inline=False
+        )
+
+        return embed
+
     async def _format_cog(self, cog: t.Optional[Cog], commands: t.Optional[t.List[Command]] = None) -> Embed:
         """
-        Format a help embed message for the given cog.
+        Format a help embed message for the given `cog`.
 
-        In case to cog is given, a help embed will be made for commands outside of any cog.
+        If `commands` are provided, they'll be used without any additional filtering,
+        otherwise commands will be detected from `cog` and filtered.
+
+        In case `cog` is None, a help embed will be made for `commands` as unclassified commands.
         """
         if cog:
             cog_description = cog.description if cog.description else "No description provided"
@@ -126,6 +165,11 @@ class HelpCommand(OriginalHelpCommand):
     async def send_command_help(self, command: Command) -> None:
         """Send help for specific command."""
         embed = await self._fromat_command(command)
+        await self.context.send(embed=embed)
+
+    async def send_group_help(self, group: Group) -> None:
+        """Send help for specific group."""
+        embed = await self._format_group(group)
         await self.context.send(embed=embed)
 
 
