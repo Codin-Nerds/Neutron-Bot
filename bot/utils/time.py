@@ -105,7 +105,6 @@ def stringify_duration(duration: t.Union[int, float], min_unit: str = "seconds")
     if isinstance(duration, float):
         if duration == float("inf"):
             return "infinity"
-        duration = round(duration)
 
     now = datetime.now()
     rel_delta = relativedelta(now + timedelta(seconds=duration), now)
