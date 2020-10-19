@@ -5,7 +5,7 @@ import os
 DEV_MODE = True
 
 # Ownership settings:
-creator = "The Codin Team"
+creator = "The Codin Nerds Team"
 devs = [711194921683648523, 306876636526280705]
 
 # Database
