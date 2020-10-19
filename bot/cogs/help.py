@@ -3,6 +3,7 @@ import typing as t
 
 from discord import Color, Embed
 from discord.ext.commands import Cog, Command, Group, HelpCommand as BaseHelpCommand
+from discord.ext.commands.errors import CheckFailure
 from discord.ext.menus import ListPageSource, Menu, MenuPages
 
 from bot.core.bot import Bot
@@ -24,15 +25,14 @@ class HelpCommand(BaseHelpCommand):
         super().__init__(command_attrs={"help": "Shows help for given command / all commands"})
 
     async def _describe_command(self, command: Command) -> t.Tuple[str, str, str, str]:
+        if not await command.can_run(self.context):
+            raise CheckFailure("You don't have permission to view help for this command.")
+
         parent = command.full_parent_name
 
         command_name = str(command) if not parent else f"{parent} {command.name}"
         command_syntax = f"{self.context.prefix}{command_name} {command.signature}"
-
-        if await command.can_run(self.context):
-            command_help = f"{command.help or 'No description provided.'}"
-        else:
-            command_help = "You don't have permission to use this command."
+        command_help = f"{command.help or 'No description provided.'}"
 
         aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
         aliases = ", ".join(sorted(aliases))
