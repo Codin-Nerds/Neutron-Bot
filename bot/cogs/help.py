@@ -162,14 +162,14 @@ class HelpCommand(BaseHelpCommand):
         embed = await self._format_cog(cog)
         await self.context.send(embed=embed)
 
-    async def send_command_help(self, command: Command) -> None:
-        """Send help for specific command."""
-        embed = await self._fromat_command(command)
-        await self.context.send(embed=embed)
-
     async def send_group_help(self, group: Group) -> None:
         """Send help for specific group."""
         embed = await self._format_group(group)
+        await self.context.send(embed=embed)
+
+    async def send_command_help(self, command: Command) -> None:
+        """Send help for specific command."""
+        embed = await self._fromat_command(command)
         await self.context.send(embed=embed)
 
 
