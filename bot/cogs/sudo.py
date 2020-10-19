@@ -8,7 +8,7 @@ from datetime import datetime
 
 from discord import Color, DiscordException, Embed
 from discord import __version__ as discord_version
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, NotOwner, group
 
 from bot import config
 from bot.core.bot import Bot
@@ -100,12 +100,12 @@ class Sudo(Cog):
 
         await ctx.send(embed=embed)
 
-    async def cog_check(self, ctx: Context) -> t.Union[bool, None]:
+    async def cog_check(self, ctx: Context) -> t.Optional[bool]:
         """Only the bot owners can use this."""
         if ctx.author.id in config.devs:
             return True
 
-        return False
+        raise NotOwner
 
 
 def setup(bot: Bot) -> None:
