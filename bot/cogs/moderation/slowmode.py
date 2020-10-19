@@ -6,7 +6,7 @@ from bot.core.converters import Duration
 from bot.utils.time import stringify_duration
 
 
-class Lock(Cog):
+class Slowmode(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -47,4 +47,4 @@ class Lock(Cog):
 
 
 def setup(bot: Bot) -> None:
-    bot.add_cog(Lock(bot))
+    bot.add_cog(Slowmode(bot))
