@@ -61,7 +61,7 @@ class Lock(Cog):
         return True
 
     @command(aliases=["silence"])
-    async def lock(self, ctx: Context = None, duration: t.Optional[Duration] = None, *, reason: t.Optional[str]) -> None:
+    async def lock(self, ctx: Context, duration: t.Optional[Duration] = None, *, reason: t.Optional[str]) -> None:
         """
         Disallow everyones permission to talk in this channel
         for given `duration` or indefinitely.
