@@ -10,12 +10,56 @@ from bot.core.bot import Bot
 
 
 class HelpPages(ListPageSource):
-    def __init__(self, cog_embeds: t.List[Embed]):
-        super().__init__(cog_embeds, per_page=1)
+    def __init__(self, embeds: t.List[Embed]):
+        super().__init__(embeds, per_page=1)
 
     async def format_page(self, menu: Menu, embed: Embed) -> Embed:
-        """Return the stored embed for current cog."""
+        """Return the stored embed for current page."""
         return embed
+
+    @classmethod
+    def split_messages(
+        cls,
+        messages: t.List[str],
+        initial_embed: t.Optional[Embed] = None,
+        max_characters: int = 1024,
+    ) -> "HelpPages":
+        """
+        Automatically split the given message into multiple embeds.
+
+        Return an instance of this class with these embeds set as entries for the menu
+        """
+        split_messages = []
+        index = 0
+        for message in messages:
+            try:
+                stored_msg = split_messages[index]
+            except IndexError:
+                stored_msg = ""
+                split_messages.append(stored_msg)
+
+            if len(stored_msg + message) > max_characters:
+                index += 1
+
+            try:
+                split_messages[index] += message
+            except IndexError:
+                split_messages.append(message)
+
+        embeds = []
+        if initial_embed:
+            embeds.append(initial_embed)
+
+        for page, message in enumerate(split_messages):
+            embeds.append(
+                Embed(
+                    title=f"Page listing: {page + 1}",
+                    description=message,
+                    color=Color.blue()
+                )
+            )
+
+        return cls(embeds)
 
 
 class HelpCommand(BaseHelpCommand):
@@ -64,7 +108,7 @@ class HelpCommand(BaseHelpCommand):
 
         return embed
 
-    async def _format_group(self, group: Group) -> Embed:
+    async def _format_group(self, group: Group) -> t.Union[Embed, HelpPages]:
         """Format a help embed message for giver `group`."""
         subcommands = group.commands
 
@@ -76,15 +120,22 @@ class HelpCommand(BaseHelpCommand):
 
         embed = await self._fromat_command(group)
 
-        message = ""
+        messages = []
         for subcommand in subcommands:
             _, command_syntax, command_help, _ = await self._describe_command(subcommand)
-            message += textwrap.dedent(
+            messages.append(textwrap.dedent(
                 f"""
                 `{command_syntax}`
                 *{command_help}*
                 """
-            )
+            ))
+
+        message = "".join(messages)
+
+        # In case the message is too long (discord embed field limit is 1024)
+        # Split it into multiple embeds and return `HelpPages` menus object
+        if len(message) > 1024:
+            return HelpPages.split_messages(messages)
 
         embed.add_field(
             name="Subcommands:",
@@ -164,8 +215,16 @@ class HelpCommand(BaseHelpCommand):
 
     async def send_group_help(self, group: Group) -> None:
         """Send help for specific group."""
-        embed = await self._format_group(group)
-        await self.context.send(embed=embed)
+        formatted_help = await self._format_group(group)
+
+        if isinstance(formatted_help, HelpPages):
+            pages = MenuPages(
+                source=formatted_help,
+                clear_reactions_after=True
+            )
+            await pages.start(self.context)
+        else:
+            await self.context.send(embed=formatted_help)
 
     async def send_command_help(self, command: Command) -> None:
         """Send help for specific command."""
