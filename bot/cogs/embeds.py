@@ -1,15 +1,29 @@
 import json
-import textwrap
 import typing as t
 from collections import defaultdict
 from contextlib import suppress
 
-from discord import Color, Embed, Forbidden, Member, TextChannel
+from discord import Embed, Forbidden, Member, TextChannel
 from discord.errors import HTTPException
 from discord.ext.commands import Cog, ColourConverter, Context, MessageConverter, group
 
 from bot.core.bot import Bot
 from bot.core.converters import Unicode
+
+
+class InvalidEmbed(Exception):
+    def __init__(
+        self,
+        discord_code: int,
+        status_code: int,
+        status_text: str,
+        message: str
+    ):
+        super().__init__(message)
+        self.discord_code = discord_code
+        self.status_code = status_code
+        self.status_text = status_text
+        self.message = message
 
 
 class EmbedData(t.NamedTuple):
@@ -62,26 +76,10 @@ class JsonEmbedParser:
         try:
             return json.loads(json_code)
         except json.JSONDecodeError as error:
-            lines = json_code.split("\n")
-
-            embed = Embed(
-                description=textwrap.dedent(
-                    f"""
-                    Sorry, I couldn't parse this JSON:
-                    ```
-                    {error}
-                    ```
-                    The error seems to be here *(`line: {error.lineno} col: {error.colno}`)*:
-                    ```
-                    {lines[error.lineno - 1]}
-                    {" " * (int(error.colno) - 1)}^
-                    ```
-                    """
-                ),
-                color=Color.red(),
-            )
-            await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
-            return False
+            # Set lines property so that the error handler can
+            # show the user line in which the error has occurred
+            error.lines = json_code.split("\n")
+            raise error
 
     @staticmethod
     def process_dict(json_dct: dict) -> dict:
@@ -359,20 +357,12 @@ class Embeds(Cog):
             await channel.send(self.embeds[author].content, embed=self.embeds[author].embed)
             return True
         except HTTPException as error:
-            embed = Embed(
-                description=textwrap.dedent(
-                    f"""
-                    You're embed is causing an error (code: `{error.code}`):
-                    ```{error.response.status}: {error.response.reason}```
-                    With message:
-                    ```{error.text}```
-
-                    """
-                ),
-                color=Color.red(),
+            raise InvalidEmbed(
+                discord_code=error.code,
+                status_code=error.response.status,
+                status_text=error.response.reason,
+                message=error.text
             )
-            await channel.send(f"Sorry {author.mention}", embed=embed)
-            return False
 
     @embed_group.command(aliases=["show"])
     async def preview(self, ctx: Context) -> None:
