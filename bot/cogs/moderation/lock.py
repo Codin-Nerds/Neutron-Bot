@@ -18,47 +18,72 @@ from bot.utils.time import stringify_reldelta
 class Lock(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.locked_channels = defaultdict(set)
+        self.previous_permissions = defaultdict(lambda: defaultdict(None))
         self.timer = Timer("channel_lock")
         self.roles_db: Roles = Roles.reference()
         self.permissions_db: Permissions = Permissions.reference()
 
-    async def _lock(self, channel: TextChannel) -> bool:
+    async def _lock(self, channel: TextChannel) -> t.Literal[-1, 0, 1]:
         """
         Disable the permission to `send_messages`
         in `channel` for the `default_role` on that server.
 
-        Return `False` in case the channel was already silenced,
-        otherwise return `True`
+        Return codes:
+        - 1: Channel locked successfully
+        - 0: Channel was already silenced
+        - -1: Channel was silenced manually
         """
         default_role_id = self.roles_db.get_default_role(channel.guild)
         default_role = channel.guild.get_role(default_role_id)
         current_permissions = channel.overwrites_for(default_role)
+        last_permissions = self.previous_permissions[channel.guild].get(channel)
 
-        if current_permissions.send_messages is False:
+        if last_permissions and current_permissions.send_messages is False:
             logger.warning(f"Tried to silence already silenced channel #{channel} ({channel.id}).")
-            return False
+            return 0
 
+        elif current_permissions.send_messages is False:
+            logger.warning(f"Tried to silence manually silenced channel #{channel} ({channel.id}).")
+            return -1
+
+        self.previous_permissions[channel.guild][channel] = current_permissions
         await channel.set_permissions(default_role, **dict(current_permissions, send_messages=False))
-        self.locked_channels[channel.guild].add(channel)
-        return True
 
-    async def _unlock(self, channel: TextChannel) -> bool:
+        return 1
+
+    async def _unlock(self, channel: TextChannel) -> t.Literal[-2, -1, 0, 1]:
         """
         Reset the permission to `send_messages`
         in `channel` for the `default_role` on that server.
+
+        Return codes:
+        1: Channel successfully unlocked
+        0: Channel wasn't silenced
+        -1: Channel was already unsilenced manually
+        -2: Channel was silenced manually
         """
         default_role_id = self.roles_db.get_default_role(channel.guild)
         default_role = channel.guild.get_role(default_role_id)
         current_permissions = channel.overwrites_for(default_role)
+        last_permissions = self.previous_permissions[channel.guild].get(channel)
 
-        if current_permissions.send_messages is not False:
-            logger.warning(f"Tried to unsilence already unsilenced channel #{channel} ({channel.id}).")
-            return False
+        if last_permissions and current_permissions.send_messages is not False:
+            logger.warning(f"Tried to unsilence already manually unsilenced channel #{channel} ({channel.id}).")
+            del self.previous_permissions[channel.guild][channel]
+            return -1
 
-        await channel.set_permissions(default_role, **dict(current_permissions, send_messages=None))
-        self.locked_channels[channel.guild].discard(channel)
-        return True
+        elif current_permissions.send_messages is not False:
+            logger.warning(f"Tried to unsilence non-silenced channel #{channel} ({channel.id}).")
+            return 0
+
+        elif last_permissions is None:
+            logger.warning(f"Tried to unsilence manually silenced channel #{channel} ({channel.id}).")
+            return -2
+
+        await channel.set_permissions(default_role, **dict(last_permissions))
+        del self.previous_permissions[channel.guild][channel]
+
+        return 1
 
     @command(aliases=["silence"])
     async def lock(self, ctx: Context = None, duration: t.Optional[Duration] = None, *, reason: t.Optional[str]) -> None:
@@ -66,26 +91,26 @@ class Lock(Cog):
         Disallow everyones permission to talk in this channel
         for given `duration` or indefinitely.
         """
-        if duration == float("inf"):
-            duration = None
+        if duration is None:
+            duration = float("inf")
 
         max_duration = await self.permissions_db.get_locktime(ctx.guild, ctx.author)
-
-        if any([
-            not duration and max_duration != -1,
-            duration and max_duration != -1 and duration > max_duration
-        ]):
+        if max_duration != -1 and duration > max_duration:
             raise MissingPermissions(["sufficient_locktime"])
 
         logger.debug(f"Channel #{ctx.channel} was silenced by {ctx.author}.")
 
-        if not await self._lock(ctx.channel):
+        status = await self._lock(ctx.channel)
+        if status == 0:
             await ctx.send(":x: This channel is already locked.")
+            return
+        elif status == -1:
+            await ctx.send(":x: This channel was already locked manually using channel permissions.")
             return
 
         reason = "No reason specified" if not reason else reason
 
-        if not duration:
+        if duration == float("inf"):
             await ctx.send(f"🔒 Channel locked indefinitely: {reason}.")
             return
 
@@ -97,11 +122,17 @@ class Lock(Cog):
         """Unsilence current channel."""
         logger.debug(f"Channel #{ctx.channel} was unsilenced.")
 
-        if await self._unlock(ctx.channel):
+        status = await self._unlock(ctx.channel)
+        if status == 1:
             self.timer.abort(ctx.channel.id)
             await ctx.send("🔓 Channel unlocked.")
-        else:
-            await ctx.send(":x: This channel isn't silenced.")
+        elif status == 0:
+            await ctx.send(":x: This channel isn't locked.")
+        elif status == -1:
+            self.timer.abort(ctx.channel.id)
+            await ctx.send(":x: This channel was already unsilenced manually, no action taken.")
+        elif status == -2:
+            await ctx.send(":x: This channel is silenced manually using channel permissions, you'll need to unsilence it manually.")
 
     def cog_unload(self) -> None:
         """Send a modlog message about the channels which were left unsilenced"""
