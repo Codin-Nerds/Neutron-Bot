@@ -35,7 +35,7 @@ class Slowmode(Cog):
 
     async def cog_check(self, ctx: Context) -> bool:
         """
-        Only allow users with manage messages permission to use these function.
+        Only allow users with manage channels permission to use these function.
 
         Also make sure there's a default role set for that server.
         In case there isn't, send an error message.
