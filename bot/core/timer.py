@@ -125,3 +125,4 @@ class Timer:
             exception = executed_task.exception()
             if exception:
                 logger.error(f"Exception ocurred while executing {self.id}:{task_name} ({id(executed_task)})")
+                raise exception
