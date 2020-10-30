@@ -137,15 +137,18 @@ class Lock(Cog):
     def cog_unload(self) -> None:
         """Send a modlog message about the channels which were left unsilenced"""
         self.timer.abort_all()
-        for guild, channels in self.locked_channels.items():
+
+        for guild, channels in self.previous_permissions.items():
             moderator_role_id = self.roles_db.get_staff_role(guild.id)
             if moderator_role_id:
-                message = f"<@&{moderator_role_id}> "
+                message = f"⚠️ <@&{moderator_role_id}> "
             else:
-                message = ""
-            message += "This channel was left locked after lock cog unloaded"
-            for channel in channels:
+                message = "⚠️ "
+            message += "This channel was left locked after lock cog unloaded, performing automatic unlock"
+
+            for channel in channels.keys():
                 asyncio.create_task(channel.send(message))
+                asyncio.create_task(self._unlock(channel))
 
     async def cog_check(self, ctx: Context) -> bool:
         """
