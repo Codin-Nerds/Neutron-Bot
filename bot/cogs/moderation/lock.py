@@ -144,9 +144,10 @@ class Lock(Cog):
                 message = f"⚠️ <@&{moderator_role_id}> "
             else:
                 message = "⚠️ "
-            message += "This channel was left locked after lock cog unloaded, performing automatic unlock"
+            message += "This channel was left locked after lock cog unloaded, performing automatic unlock."
 
             for channel in channels.keys():
+                logger.debug(f"Channel #{channel} ({channel.id}) was left locked after lock cog unloaded, performing automatic unlock.")
                 asyncio.create_task(channel.send(message))
                 asyncio.create_task(self._unlock(channel))
 
