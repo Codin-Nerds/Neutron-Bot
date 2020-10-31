@@ -144,6 +144,16 @@ class HelpCommand(BaseHelpCommand):
         super().__init__(command_attrs={"help": "Shows help for given command / all commands"})
 
     async def _describe_command(self, command: Command) -> t.Tuple[str, str, str, str]:
+        """
+        Describe command in a meaningful syntax which can than be showed to
+        users to provide details about given command.
+
+        Returns a tuple of these variabels:
+        1. `command_name`: the exact syntex (without prefix) used to call the command
+        2. `command_syntax`: contains the command name with prefix and the values command takes
+        3. `command_help`: the help docstring from given command
+        4. `aliases`: all aliases the command has, separated by comma
+        """
         if not await command.can_run(self.context):
             raise CheckFailure("You don't have permission to view help for this command.")
 
