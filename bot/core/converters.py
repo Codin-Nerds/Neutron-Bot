@@ -12,6 +12,7 @@ from discord.ext.commands import (
     MemberConverter, MemberNotFound,
     UserConverter, UserNotFound
 )
+from loguru import logger
 
 
 def _obtain_user_id(argument: str) -> t.Optional[int]:
@@ -63,8 +64,7 @@ class Unicode(Converter):
                 line = line.replace("`<ESCAPE STRING>`", "'''")
                 lines[index] = line
             except SyntaxError as error:
-                print(line)
-                print(f"String deemed unsafe -> {error}")
+                logger.info(f"Unicode message conversion failed on line: {line}, string considered unsafe ({error})")
 
         return "\n".join(lines)
 
