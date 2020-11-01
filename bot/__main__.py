@@ -12,11 +12,15 @@ extensions = [
     "bot.cogs.error_handler",
     "bot.cogs.help",
     "bot.cogs.sudo",
+
     "bot.cogs.moderation.lock",
     "bot.cogs.moderation.slowmode",
+
     "bot.cogs.setup.roles",
     "bot.cogs.setup.permissions",
+
     "bot.cogs.embeds",
+    "bot.cogs.reminders"
 ]
 db_tables = [
     "bot.database.roles",
