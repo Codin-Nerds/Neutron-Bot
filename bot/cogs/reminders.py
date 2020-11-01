@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from discord import Member
+from discord import Color, Embed, Member
 from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.errors import BadArgument
 
@@ -17,9 +17,14 @@ class Reminders(Cog):
         self.timer = Timer("reminder")
 
     async def _remind(self, author: Member, message: str) -> None:
-        pass
+        embed = Embed(
+            title="Your reminder has arrived",
+            description=message,
+            color=Color.blue()
+        )
+        await author.send(embed=embed)
 
-    @group(invoke_without_command=True, alias=["reminders", "remind"])
+    @group(invoke_without_command=True, aliases=["reminders", "remind"])
     async def reminder(self, ctx: Context) -> None:
         """Commands for configuring the reminders."""
         await ctx.send_help(ctx.command)
