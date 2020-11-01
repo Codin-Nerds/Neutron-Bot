@@ -12,7 +12,7 @@ from discord.ext.commands import Cog, Context, NotOwner, group
 
 from bot import config
 from bot.core.bot import Bot
-from bot.utils import time as tm
+from bot.utils.time import stringify_timedelta
 
 
 class Sudo(Cog):
@@ -81,7 +81,7 @@ class Sudo(Cog):
             • Servers: **`{len(self.bot.guilds)}`**
             • Commands: **`{len(self.bot.commands)}`**
             • Members: **`{len(set(self.bot.get_all_members()))}`**
-            • Uptime: **{tm.stringify_reldelta(datetime.utcnow() - self.bot.start_time)}**
+            • Uptime: **{stringify_timedelta(datetime.utcnow() - self.bot.start_time)}**
             """
         )
         system = textwrap.dedent(
@@ -96,7 +96,7 @@ class Sudo(Cog):
         embed.add_field(name="**❯❯ System**", value=system, inline=True)
 
         embed.set_author(name=f"{self.bot.user.name}'s Stats", icon_url=self.bot.user.avatar_url)
-        embed.set_footer(text=f"Made by {config.creator} Team.")
+        embed.set_footer(text=f"Made by {config.creator}.")
 
         await ctx.send(embed=embed)
 

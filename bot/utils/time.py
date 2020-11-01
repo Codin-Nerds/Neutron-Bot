@@ -82,7 +82,7 @@ def stringify_timedelta(time_delta: timedelta, min_unit: str = "seconds") -> str
     return stringify_reldelta(rel_delta, min_unit=min_unit)
 
 
-def stringify_duration(duration: int, min_unit: str = "seconds") -> str:
+def stringify_duration(duration: t.Union[int, float], min_unit: str = "seconds") -> str:
     """
     Convert `duration` in seconds into a readable time string
 
@@ -102,6 +102,10 @@ def stringify_duration(duration: int, min_unit: str = "seconds") -> str:
     you'd get:
     `1 year 2 months 2 weeks and 5 days`
     """
+    if isinstance(duration, float):
+        if duration == float("inf"):
+            return "infinity"
+
     now = datetime.now()
     rel_delta = relativedelta(now + timedelta(seconds=duration), now)
     return stringify_reldelta(rel_delta, min_unit=min_unit)

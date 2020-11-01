@@ -127,14 +127,23 @@ class TimeDelta(Converter):
 class Duration(TimeDelta):
     """Convert duration strings into amount of seconds"""
 
-    async def convert(self, ctx: Context, duration: str) -> int:
+    async def convert(self, ctx: Context, duration: str) -> t.Union[int, float]:
         """
         Convert a `duration` string into a relativedelta using
         super `TimeDelta` converter. After that, simply change
         the relative delta into the amount of seconds it represents.
+
+        Accepted inputs (in order):
+        * infinity inputs: `-1`, `inf`, `infinity`, `infinite`
+        * zero inputs: `0`, `none`, `null`
+        * `TimeDelta` converter inputs
         """
+        duration = duration.lower()
+
         if duration in ["-1", "inf", "infinite", "infinity"]:
             return float("inf")
+        if duration in ["0", "none", "null"]:
+            return 0
 
         delta = await super().convert(ctx, duration)
 
