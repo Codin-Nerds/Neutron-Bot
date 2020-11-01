@@ -10,6 +10,7 @@ PREFIX = config.COMMAND_PREFIX
 
 extensions = [
     "bot.cogs.error_handler",
+    "bot.cogs.help",
     "bot.cogs.sudo",
     "bot.cogs.moderation.lock",
     "bot.cogs.moderation.slowmode",
