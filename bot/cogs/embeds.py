@@ -130,7 +130,7 @@ class Embeds(Cog):
     @group(invoke_without_command=True, name="embed", aliases=["embedset", "set_embed"])
     async def embed_group(self, ctx: Context) -> None:
         """Commands for configuring the Embed messages."""
-        await ctx.send("This command is not meant to be used on its own!")
+        await ctx.send_help(ctx.command)
 
     # region: basic embed settings (title, description, footer, image, color, message)
 

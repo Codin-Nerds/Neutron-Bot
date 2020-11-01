@@ -14,7 +14,8 @@ extensions = [
     "bot.cogs.setup.permissions",
     "bot.cogs.sudo",
     "bot.cogs.embeds",
-    "bot.cogs.error_handler"
+    "bot.cogs.error_handler",
+    "bot.cogs.help"
 ]
 db_tables = [
     "bot.database.roles",
