@@ -17,6 +17,8 @@ class Reminders(Cog):
         self.timer = Timer("reminder")
 
     async def _remind(self, author: Member, message: str) -> None:
+        self.reminders[author].remove(message)
+
         embed = Embed(
             title="Your reminder has arrived",
             description=message,
@@ -43,7 +45,7 @@ class Reminders(Cog):
 
         await ctx.send(f"You'll be reminded in {stringify_duration(duration)}: {message}.")
 
-    @reminder.command(aliases=["delete"])
+    @reminder.command(aliases=["delete", "cancel", "abort"])
     async def remove(self, ctx: Context, reminder_id: int) -> None:
         """
         Remove given reminder based on the `reminder_id`
@@ -60,7 +62,7 @@ class Reminders(Cog):
                 await ctx.send(f":x: Sorry, you don't have reminder with this ID. (Maximum ID: {reminder_amount})")
             return
 
-        self.timer.abort(f"{ctx.author.id}.{reminder_id - 1}")
+        self.timer.abort(f"{ctx.author.id}.{reminder_id}")
         del self.reminders[ctx.author][reminder_id - 1]
 
         await ctx.send(f"Reminder {reminder_id} has been cancelled.")
