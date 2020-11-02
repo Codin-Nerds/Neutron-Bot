@@ -24,7 +24,7 @@ class Slowmode(Cog):
         await ctx.channel.edit(slowmode_delay=duration)
 
         if duration:
-            log_msg = f"ser {ctx.author} applied slowmode to #{ctx.channel} for {stringify_duration(duration)}"
+            log_msg = f"User {ctx.author} applied slowmode to #{ctx.channel} for {stringify_duration(duration)}"
             msg = f"⏱️ Applied slowmode for this channel, time delay: {stringify_duration(duration)}."
         else:
             log_msg = f"User {ctx.author} removed slowmode from #{ctx.channel}"
