@@ -1,19 +1,10 @@
 import typing as t
-from dataclasses import dataclass
 
 from discord import Guild, Member, Role
 from loguru import logger
 
 from bot.core.bot import Bot
 from bot.database import DBTable, Database
-
-
-@dataclass
-class Entry:
-    """Class for storing the database rows of roles table."""
-    _default: int
-    muted: int
-    staff: int
 
 
 class Permissions(DBTable):
