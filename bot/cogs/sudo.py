@@ -19,10 +19,10 @@ class Sudo(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    @group(hidden=True)
+    @group(invoke_without_command=True, hidden=True)
     async def sudo(self, ctx: Context) -> None:
         """Administrative information."""
-        pass
+        await ctx.send_help(ctx.command)
 
     @sudo.command()
     async def shutdown(self, ctx: Context) -> None:
