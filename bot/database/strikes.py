@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from discord import Guild, User
 from loguru import logger
 
-from bot.config import STRIKE_TYPES
 from bot.core.bot import Bot
 from bot.database import DBTable, Database
 
@@ -48,7 +47,7 @@ class Strikes(DBTable):
         guild: t.Union[Guild, int],
         author: t.Union[User, int],
         subject: t.Union[User, int],
-        strike_type: STRIKE_TYPES,
+        strike_type: str,
         reason: str = "None"
     ) -> None:
         """Set a `role_name` column to store `role` for the specific `guild`."""
@@ -87,7 +86,7 @@ class Strikes(DBTable):
         strike_id: int,
         author: t.Union[User, int],
         subject: t.Union[User, int],
-        strike_type: STRIKE_TYPES,
+        strike_type: str,
         reason: str
     ) -> None:
         """Set a `role_name` column to store `role` for the specific `guild`."""

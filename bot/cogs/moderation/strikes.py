@@ -1,4 +1,6 @@
-from discord.ext.commands import Cog, Context, command
+import typing as t
+from discord.ext.commands import Cog, Context, group
+from discord.ext.commands.errors import BadArgument
 
 from bot.config import STRIKE_TYPES
 from bot.core.bot import Bot
@@ -19,9 +21,17 @@ class Strikes(Cog):
         self.bot = bot
         self.strikes_db: StrikesDB = StrikesDB.reference()
 
-    @command
-    async def add(self, ctx: Context, user: ProcessedUser, strike_type: STRIKE_TYPES, *, reason: str) -> None:
+    @group(invoke_without_command=True, name="strike", aliases=["strikes", "infraction", "infractions"])
+    async def strike_group(self, ctx: Context) -> None:
+        """Commands for configuring the Embed messages."""
+        await ctx.send_help(ctx.command)
+
+    @strike_group.command()
+    async def add(self, ctx: Context, user: ProcessedUser, strike_type: str, *, reason: t.Optional[str]) -> None:
         """Add a new strike to given `user`"""
+        if strike_type not in STRIKE_TYPES:
+            raise BadArgument(f"Invalid strike type, possible types are: {', '.join(STRIKE_TYPES)}")
+
         await self.strikes_db.add_strike(ctx.guild, ctx.author, user, strike_type, reason)
         await ctx.send(f"✅ {strike_type} strike applied to {user} for: {reason}")
 
