@@ -19,6 +19,7 @@ extensions = [
     "bot.cogs.embeds",
 ]
 db_tables = [
+    "bot.database.strikes",
     "bot.database.roles",
     "bot.database.permissions",
 ]
