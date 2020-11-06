@@ -27,13 +27,13 @@ class Strikes(Cog):
         await ctx.send_help(ctx.command)
 
     @strike_group.command()
-    async def add(self, ctx: Context, user: ProcessedUser, strike_type: str, *, reason: t.Optional[str]) -> None:
+    async def add(self, ctx: Context, user: ProcessedUser, strike_type: str, *, reason: t.Optional[str] = "No reason specified") -> None:
         """Add a new strike to given `user`"""
         if strike_type not in STRIKE_TYPES:
-            raise BadArgument(f"Invalid strike type, possible types are: {', '.join(STRIKE_TYPES)}")
+            raise BadArgument(f"Invalid strike type, possible types are: `{', '.join(STRIKE_TYPES)}`")
 
         await self.strikes_db.add_strike(ctx.guild, ctx.author, user, strike_type, reason)
-        await ctx.send(f"✅ {strike_type} strike applied to {user} for: {reason}")
+        await ctx.send(f"✅ {strike_type} strike applied to {user.mention}, reason: `{reason}`")
 
     async def cog_check(self, ctx: Context) -> bool:
         """
