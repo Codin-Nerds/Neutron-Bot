@@ -23,7 +23,14 @@ class Strikes(Cog):
 
     @group(invoke_without_command=True, name="strike", aliases=["strikes", "infraction", "infractions"])
     async def strike_group(self, ctx: Context) -> None:
-        """Commands for configuring the Embed messages."""
+        """
+        Commands for configuring the strike messages.
+
+        Note: Strike manipulation is usually a bad idea, if you want to
+        add a strike to the user, you can use commands made for it.
+        Using this will manually add the strike, without invoking the action
+        which naturally comes with it (such as ban, kick, etc.).
+        """
         await ctx.send_help(ctx.command)
 
     @strike_group.command()
