@@ -12,6 +12,7 @@ extensions = [
     "bot.cogs.error_handler",
     "bot.cogs.help",
     "bot.cogs.sudo",
+    "bot.cogs.moderation.strikes",
     "bot.cogs.moderation.lock",
     "bot.cogs.moderation.slowmode",
     "bot.cogs.setup.roles",
