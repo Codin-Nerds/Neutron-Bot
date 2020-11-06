@@ -1,7 +1,7 @@
 import typing as t
 from dataclasses import dataclass
 
-from discord import Guild, User
+from discord import Guild, Member, User
 from loguru import logger
 
 from bot.core.bot import Bot
@@ -45,17 +45,17 @@ class Strikes(DBTable):
     async def add_strike(
         self,
         guild: t.Union[Guild, int],
-        author: t.Union[User, int],
-        subject: t.Union[User, int],
+        author: t.Union[Member, User, int],
+        subject: t.Union[Member, User, int],
         strike_type: str,
         reason: str = "None"
     ) -> None:
         """Set a `role_name` column to store `role` for the specific `guild`."""
         if isinstance(guild, Guild):
             guild = guild.id
-        if isinstance(subject, User):
+        if isinstance(subject, Member) or isinstance(subject, User):
             subject = subject.id
-        if isinstance(author, User):
+        if isinstance(author, Member) or isinstance(author, User):
             author = author.id
 
         logger.debug(f"Adding {strike_type} strike to {subject} from {author} for {reason}")
@@ -84,17 +84,17 @@ class Strikes(DBTable):
         self,
         guild: t.Union[Guild, int],
         strike_id: int,
-        author: t.Union[User, int],
-        subject: t.Union[User, int],
+        author: t.Union[Member, User, int],
+        subject: t.Union[Member, User, int],
         strike_type: str,
         reason: str
     ) -> None:
         """Set a `role_name` column to store `role` for the specific `guild`."""
         if isinstance(guild, Guild):
             guild = guild.id
-        if isinstance(subject, User):
+        if isinstance(subject, Member) or isinstance(subject, User):
             subject = subject.id
-        if isinstance(author, User):
+        if isinstance(author, Member) or isinstance(author, User):
             author = author.id
 
         logger.debug(f"Adding {strike_type} strike to {subject} from {author} for {reason}")
@@ -119,10 +119,10 @@ class Strikes(DBTable):
         except TypeError:
             return None
 
-    async def get_user_strikes(self, guild: t.Union[Guild, int], subject: t.Union[User, int]) -> t.List[Entry]:
+    async def get_user_strikes(self, guild: t.Union[Guild, int], subject: t.Union[Member, User, int]) -> t.List[Entry]:
         if isinstance(guild, Guild):
             guild = guild.id
-        if isinstance(subject, User):
+        if isinstance(subject, Member) or isinstance(subject, User):
             subject = subject.id
 
         record = await self.db_get(
@@ -136,10 +136,10 @@ class Strikes(DBTable):
         except TypeError:
             return None
 
-    async def get_authored_strikes(self, guild: t.Union[Guild, int], author: t.Union[User, int]) -> t.List[Entry]:
+    async def get_authored_strikes(self, guild: t.Union[Guild, int], author: t.Union[Member, User, int]) -> t.List[Entry]:
         if isinstance(guild, Guild):
             guild = guild.id
-        if isinstance(author, User):
+        if isinstance(author, Member) or isinstance(author, User):
             author = author.id
 
         record = await self.db_get(
