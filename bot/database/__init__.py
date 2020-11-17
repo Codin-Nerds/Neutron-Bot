@@ -268,6 +268,33 @@ class DBTable(metaclass=Singleton):
 
         await self.db_execute(sql, values)
 
+    async def db_set_return(
+        self,
+        columns: t.List[str],
+        values: t.List[str],
+        return_columns: t.List[str]
+    ) -> t.Union[asyncpg.Record, t.List[asyncpg.Record]]:
+        """
+        This method serves as an abstraction layer
+        from using SQL syntax in the top-level database
+        table class, it runs the basic insertion (set)
+        command and returns specified `return_column`
+        without needing to use SQL syntax at all.
+        """
+        sql_columns = ", ".join(columns)
+        sql_values = ", ".join(f"${n + 1}" for n in range(len(values)))
+        sql_return_columns = ", ".join(return_columns)
+
+        sql = f"""
+        INSERT INTO {self.table} ({sql_columns})
+        VALUES ({sql_values})
+        RETURNING ({sql_return_columns})
+        """
+
+        if len(return_columns) == 1:
+            return await self.db_fetchone(sql, values)
+        return await self.db_fetch(sql, values)
+
     async def db_upsert(self, columns: t.List[str], values: t.List[str], conflict_columns: t.List[str]) -> None:
         """
         This method serves as an abstraction layer
