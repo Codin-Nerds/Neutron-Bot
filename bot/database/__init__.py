@@ -327,7 +327,7 @@ class Database(metaclass=Singleton):
         logger.debug("Connecting to the database")
         try:
             self.pool = await asyncpg.create_pool(**self.db_parameters)
-        except asyncpg.exceptions.PostgresError:
+        except (asyncpg.exceptions.PostgresError, ConnectionRefusedError):
             logger.error("Unable to connect to the database")
             return False
 
