@@ -108,12 +108,19 @@ class DBTable(metaclass=Singleton):
         This method also calls `__async_init__` method on top level table
         (if there is one).
         """
-        table_structure = ",\n".join(f"{column} {sql_details}" for column, sql_details in self.columns.items())
-        populate_command = f"CREATE TABLE IF NOT EXISTS {self.table} (\n{table_structure}\n)"
+        if hasattr(self, "sql"):
+            async with self.pool.acquire(timeout=self.timeout) as db:
+                await db.execute(self.sql)
+        if hasattr(self, "columns"):
+            table_structure = ",\n".join(f"{column} {sql_details}" for column, sql_details in self.columns.items())
+            populate_command = f"CREATE TABLE IF NOT EXISTS {self.table} (\n{table_structure}\n)"
 
-        logger.trace(f"Populating {self.__class__}")
-        async with self.pool.acquire(timeout=self.timeout) as db:
-            await db.execute(populate_command)
+            logger.trace(f"Populating {self.__class__}")
+            async with self.pool.acquire(timeout=self.timeout) as db:
+                await db.execute(populate_command)
+
+        if not hasattr(self, "sql") and not hasattr(self, "columns"):
+            raise RuntimeError(f"You need to either specify the column structure or sql command for {self.table} DBTable.")
 
     async def _make_cache(self) -> None:
         """
