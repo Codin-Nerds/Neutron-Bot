@@ -49,8 +49,12 @@ class Strikes(DBTable):
         subject: t.Union[Member, User, int],
         strike_type: str,
         reason: str = "None"
-    ) -> None:
-        """Set a `role_name` column to store `role` for the specific `guild`."""
+    ) -> int:
+        """
+        Set a `role_name` column to store `role` for the specific `guild`.
+
+        This will return the resulting strike id.
+        """
         if isinstance(guild, Guild):
             guild = guild.id
         if isinstance(subject, Member) or isinstance(subject, User):
@@ -59,10 +63,13 @@ class Strikes(DBTable):
             author = author.id
 
         logger.debug(f"Adding {strike_type} strike to {subject} from {author} for {reason}")
-        await self.db_set(
+        strike_id_record = await self.db_set_return(
             columns=["serverid", "author", "subject", "strike_type", "reason"],
-            values=[guild, author, subject, strike_type, reason]
+            values=[guild, author, subject, strike_type, reason],
+            return_columns=["strike_id"]
         )
+
+        return strike_id_record[0]
 
     async def get_strike(self, guild: t.Union[Guild, int], strike_id: int) -> int:
         """Get a `role_name` column for specific `guild` from cache."""

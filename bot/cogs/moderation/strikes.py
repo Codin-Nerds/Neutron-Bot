@@ -1,4 +1,5 @@
 import typing as t
+
 from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.errors import BadArgument
 
@@ -39,8 +40,8 @@ class Strikes(Cog):
         if strike_type not in STRIKE_TYPES:
             raise BadArgument(f"Invalid strike type, possible types are: `{', '.join(STRIKE_TYPES)}`")
 
-        await self.strikes_db.add_strike(ctx.guild, ctx.author, user, strike_type, reason)
-        await ctx.send(f"✅ {strike_type} strike applied to {user.mention}, reason: `{reason}`")
+        strike_id = await self.strikes_db.add_strike(ctx.guild, ctx.author, user, strike_type, reason)
+        await ctx.send(f"✅ {strike_type} strike (ID: `{strike_id}`) applied to {user.mention}, reason: `{reason}`")
 
     async def cog_check(self, ctx: Context) -> bool:
         """
