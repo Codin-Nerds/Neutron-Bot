@@ -166,20 +166,20 @@ class DBTable(metaclass=Singleton):
             cache_entry = self._cache_model(**db_entry)
             self.cache[key] = cache_entry
 
-    def cache_update(self, key: str, column: str, value: t.Any) -> None:
+    def cache_update(self, key: t.Hashable, column: t.Union[str, int], value: t.Any) -> None:
         """
         Update the stored cache value for `update_key` on `primary_value` to given `update_value`.
         """
-        setattr(self.cache[key], column, value)
+        setattr(self.cache[key], str(column), value)
 
-    def cache_get(self, key: str, column: str) -> t.Any:
+    def cache_get(self, key: t.Hashable, column: t.Union[str, int]) -> t.Any:
         """
         Obtain the value of `attribute` stored in cache for `primary_value`
         """
-        return getattr(self.cache[key], column)
+        return getattr(self.cache[key], str(column))
 
     @classmethod
-    def reference(cls) -> "DBTable":
+    def reference(cls) -> t.Any:
         """
         This is a method which returns the running instance of given class.
 
@@ -268,7 +268,7 @@ class DBTable(metaclass=Singleton):
 
         await self.db_execute(sql, values)
 
-    async def db_upsert(self, columns: t.List[str], values: t.List[str], conflict_columns: t.List[str]) -> None:
+    async def db_upsert(self, columns: t.List[str], values: t.List[t.Union[str, int]], conflict_columns: t.List[str]) -> None:
         """
         This method serves as an abstraction layer
         from using SQL syntax in the top-level database

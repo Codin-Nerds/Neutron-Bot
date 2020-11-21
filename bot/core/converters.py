@@ -189,7 +189,7 @@ class CodeBlock(Converter):
         if inline_match:
             return (None, inline_match.group(1))
 
-        return codeblock
+        return (None, codeblock)
 
 
 class ProcessedUser(UserConverter):

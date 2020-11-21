@@ -41,19 +41,17 @@ class JsonEmbedParser:
         self.json = JsonEmbedParser.process_dict(json_dict)
 
     @classmethod
-    async def from_str(cls: "JsonEmbedParser", ctx: Context, json_string: str) -> t.Union["JsonEmbedParser", bool]:
+    async def from_str(cls, ctx: Context, json_string: str) -> "JsonEmbedParser":
         """Return class instance from json string.
 
         This will return either class instance (on correct json string),
         or False on incorrect json string.
         """
         json_dict = await cls.parse_json(ctx, json_string)
-        if json_dict is False:
-            return False
         return cls(ctx, json_dict)
 
     @classmethod
-    def from_embed(cls: "JsonEmbedParser", ctx: Context, embed: t.Union[Embed, EmbedData]) -> "JsonEmbedParser":
+    def from_embed(cls, ctx: Context, embed: t.Union[Embed, EmbedData]) -> "JsonEmbedParser":
         """Return class instance from embed."""
         if isinstance(embed, EmbedData):
             embed_dict = embed.embed.to_dict()
@@ -63,7 +61,7 @@ class JsonEmbedParser:
         return cls(ctx, json_dict)
 
     @staticmethod
-    async def parse_json(ctx: Context, json_code: str) -> t.Union[dict, bool]:
+    async def parse_json(ctx: Context, json_code: str) -> dict:
         """Parse given json code."""
         # Sanitize code (remove codeblocks if any)
         if "```" in json_code:
@@ -312,11 +310,8 @@ class Embeds(Cog):
     async def load(self, ctx: Context, *, json_code: str) -> None:
         """Generate Embed from given JSON code."""
         embed_parser = await JsonEmbedParser.from_str(ctx, json_code)
-        if embed_parser is not False:
-            self.embeds[ctx.author] = embed_parser.make_embed()
-            await ctx.send("Embed updated accordingly to provided JSON")
-        else:
-            await ctx.send("Invalid embed JSON")
+        self.embeds[ctx.author] = embed_parser.make_embed()
+        await ctx.send("Embed updated accordingly to provided JSON")
 
     @embed_group.command(aliases=["json_dump", "to_json", "get_json", "export"])
     async def dump(self, ctx: Context) -> None:
