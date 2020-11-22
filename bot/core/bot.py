@@ -1,4 +1,5 @@
 import time
+import typing as t
 from datetime import datetime
 
 import aiohttp
@@ -12,7 +13,7 @@ from bot.database import Database
 class Bot(Base_Bot):
     """Subclassed Neutron bot."""
 
-    def __init__(self, extensions: list, db_tables: list, *args, **kwargs) -> None:
+    def __init__(self, extensions: t.List[str], db_tables: list, *args, **kwargs) -> None:
         """Initialize the subclass."""
         super().__init__(*args, **kwargs)
 
@@ -53,7 +54,7 @@ class Bot(Base_Bot):
         else:
             logger.info("Bot connection reinitialized")
 
-    def run(self, token: str) -> None:
+    def run(self, token: t.Optional[str]) -> None:
         """Override the default `run` method and add a missing token check"""
         if not token:
             logger.error("Missing Bot Token!")
