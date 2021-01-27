@@ -19,6 +19,41 @@ class Entry:
     reason: str
 
 
+class StrikeIndex(DBTable):
+    """
+    --if serverid=1 already exists
+    with upd as (update strike_index set nextid = nextid + 1 where serverid = $1 returning nextid),
+    ins (insert into strikes (strike_id, serverid) values ((select * from upd), $1) returning *)
+    select * from ins;
+    """
+    columns = {
+        "serverid": "NUMERIC(40) NOT NULL PRIMARY KEY",
+        "nextid": "INTEGER NOT NULL DEFAULT 0"
+    }
+
+    def __init__(self, bot: Bot, database: Database):
+        super().__init__(database, "strike_idex")
+        self.bot = bot
+        self.database = database
+
+    async def get_id(self, guild: t.Union[Guild, int]) -> int:
+        if isinstance(guild, Guild):
+            guild = guild.id
+
+        sql = f"""
+        WITH upd AS(
+            INSERT INTO {self.table} (serverid, nextid)
+            VALUES ($1, $2)
+            ON CONFLICT (serverid) DO
+            UPDATE SET nextid = EXCLUDED.nextid + 1
+            RETURNING nextid
+        )
+        SELECT * FROM upd
+        """
+
+        await self.db_fetch(sql, [guild, 0])
+
+
 class Strikes(DBTable):
     """
     This table stores all strikes/infractions in each guild.
@@ -41,6 +76,7 @@ class Strikes(DBTable):
         super().__init__(database, "strikes")
         self.bot = bot
         self.database = database
+        self.index_table = StrikeIndex.reference()
 
     async def add_strike(
         self,
@@ -163,3 +199,4 @@ class Strikes(DBTable):
 
 async def load(bot: Bot, database: Database) -> None:
     await database.add_table(Strikes(bot, database))
+    await database.add_table(StrikeIndex(bot, database))
