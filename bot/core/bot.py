@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from bot import config
 from bot.database import Base as DbBase
+from bot.database import load_tables
 
 
 class Bot(Base_Bot):
@@ -35,11 +36,14 @@ class Bot(Base_Bot):
 
     async def db_connect(self) -> AsyncSession:
         """Estabolish connection with the database and return the asynchronous session."""
+        load_tables()  # Load all DB Tables, in order to bring them into the metadata of DbBase
+
         engine = create_async_engine(config.DATABASE_ENGINE_STRING)
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(DbBase.metadata.create_all)  # Create all database tables from found models
         except ConnectionRefusedError:
+            # Keep recursively trying to connect to the database
             logger.error("Unable to connect to database, retrying in 5s")
             time.sleep(5)
             await self.db_connect()
