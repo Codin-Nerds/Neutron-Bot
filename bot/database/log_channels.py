@@ -1,110 +1,68 @@
 import typing as t
-from dataclasses import dataclass
 
 from discord import Guild, TextChannel
 from loguru import logger
+from sqlalchemy import Column, String
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.bot import Bot
-from bot.database import DBTable, Database
-
-
-@dataclass
-class Entry:
-    """Class for storing the database rows of log_channels table."""
-    server: int = 0
-    mod: int = 0
-    message: int = 0
-    member: int = 0
-    join: int = 0
+from bot.database import Base, upsert
 
 
-class LogChannels(DBTable):
-    """
-    This table stores all guild-specific roles:
-    * `server` log channel
-    * `mod` log channel
-    * `message` log channel
-    * `member` log channel
-    * `join` log channel
-    Under the single `serverid` column
-    """
+class LogChannels(Base):
+    __tablename__ = "log_channels"
 
-    columns = {
-        "serverid": "NUMERIC(40) UNIQUE NOT NULL",
-        "server": "NUMERIC(40) DEFAULT 0",
-        "mod": "NUMERIC(40) DEFAULT 0",
-        "message": "NUMERIC(40) DEFAULT 0",
-        "member": "NUMERIC(40) DEFAULT 0",
-        "join": "NUMERIC(40) DEFAULT 0"
-    }
+    guild = Column('guild', String, primary_key=True, nullable=False)
 
-    caching = {
-        "key": (int, "serverid"),
+    server_log = Column('server_log', String, nullable=True)
+    mod_log = Column('mod_log', String, nullable=True)
+    message_log = Column('message_log', String, nullable=True)
+    member_log = Column('member_log', String, nullable=True)
+    join_log = Column('join_log', String, nullable=True)
 
-        "server": (int, 0),
-        "mod": (int, 0),
-        "message": (int, 0),
-        "member": (int, 0),
-        "join": (int, 0)
-    }
+    @staticmethod
+    def _get_str_guild(guild: t.Union[str, int, Guild]) -> str:
+        """Make sure `guild` parameter is string."""
+        if isinstance(guild, Guild):
+            guild = str(guild.id)
+        if isinstance(guild, int):
+            guild = str(guild)
+        return guild
 
-    def __init__(self, bot: Bot, database: Database):
-        super().__init__(database, "log_channels")
-        self.bot = bot
-        self.database = database
-        self.cache: t.Dict[int, Entry] = {}
-
-    async def _set_channel(self, channel_name: str, guild: t.Union[Guild, int], channel: t.Union[TextChannel, int]) -> None:
-        """Set a `channel_name` column to store `channel.id` for the specific `guild.id`."""
+    @staticmethod
+    def _get_str_channel(channel: t.Union[str, int, TextChannel]) -> str:
+        """Make sure `channel` parameter is string."""
         if isinstance(channel, TextChannel):
-            channel = channel.id
-        if isinstance(guild, Guild):
-            guild = guild.id
+            channel = str(channel.id)
+        if isinstance(channel, int):
+            channel = str(channel)
+        return channel
 
-        logger.debug(f"Setting {channel_name}-log channel on {guild} to <#{channel}>")
-        await self.db_upsert(
-            columns=["serverid", channel_name],
-            values=[guild, channel],
-            conflict_columns=["serverid"]
+    @classmethod
+    async def set_log_channel(
+        cls,
+        session: AsyncSession,
+        log_type: str,
+        guild: t.Union[str, int, Guild],
+        channel: t.Union[str, int, TextChannel]
+    ) -> None:
+        """Store given `channel` as `log_type` log channel for `guild` into the database."""
+        guild = cls._get_str_guild(guild)
+        channel = cls._get_str_channel(channel)
+        log_type = log_type if log_type.endswith("_log") else log_type + "_log"
+
+        logger.debug(f"Setting {log_type} channel on {guild} to <#{channel}>")
+
+        await upsert(
+            session, cls,
+            conflict_columns=["guild"],
+            values={"guild": guild, log_type: channel}
         )
-        self.cache_update(guild, channel_name, channel)
 
-    def _get_channel(self, channel_name: str, guild: t.Union[Guild, int]) -> int:
-        """Get a `role_name` column for specific `guild` from cache."""
-        if isinstance(guild, Guild):
-            guild = guild.id
-        return self.cache_get(guild, channel_name)
+    @classmethod
+    async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> str:
+        """Obtain given `log_type` log channel for `guild` from the database."""
+        guild = cls._get_str_guild(guild)
+        log_type = log_type if log_type.endswith("_log") else log_type + "_log"
 
-    async def set_server_log(self, guild: t.Union[Guild, int], channel: t.Union[TextChannel, int]) -> None:
-        await self._set_channel("server", guild, channel)
-
-    async def set_mod_log(self, guild: t.Union[Guild, int], channel: t.Union[TextChannel, int]) -> None:
-        await self._set_channel("mod", guild, channel)
-
-    async def set_message_log(self, guild: t.Union[Guild, int], channel: t.Union[TextChannel, int]) -> None:
-        await self._set_channel("message", guild, channel)
-
-    async def set_member_log(self, guild: t.Union[Guild, int], channel: t.Union[TextChannel, int]) -> None:
-        await self._set_channel("member", guild, channel)
-
-    async def set_join_log(self, guild: t.Union[Guild, int], channel: t.Union[TextChannel, int]) -> None:
-        await self._set_channel("join", guild, channel)
-
-    def get_server_log(self, guild: t.Union[Guild, int]) -> int:
-        return self._get_channel("server", guild)
-
-    def get_mod_log(self, guild: t.Union[Guild, int]) -> int:
-        return self._get_channel("mod", guild)
-
-    def get_message_log(self, guild: t.Union[Guild, int]) -> int:
-        return self._get_channel("message", guild)
-
-    def get_member_log(self, guild: t.Union[Guild, int]) -> int:
-        return self._get_channel("member", guild)
-
-    def get_join_log(self, guild: t.Union[Guild, int]) -> int:
-        return self._get_channel("join", guild)
-
-
-async def load(bot: Bot, database: Database) -> None:
-    await database.add_table(LogChannels(bot, database))
+        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
+        return getattr(row, log_type)
