@@ -38,6 +38,17 @@ class LogChannels(Base):
         return channel
 
     @classmethod
+    def _get_normalized_log_type(log_type: str) -> str:
+        """Make sure `log_type` is in proper format and is valid."""
+        log_type = log_type if log_type.endswith("_log") else log_type + "_log"
+
+        valid_log_types = ["server_log", "mod_log", "message_log", "member_log", "join_log"]
+        if log_type not in valid_log_types:
+            raise ValueError(f"`log_type` received invalid type: {log_type}, valid types: {', '.join(valid_log_types)}")
+
+        return log_type
+
+    @classmethod
     async def set_log_channel(
         cls,
         session: AsyncSession,
@@ -48,7 +59,7 @@ class LogChannels(Base):
         """Store given `channel` as `log_type` log channel for `guild` into the database."""
         guild = cls._get_str_guild(guild)
         channel = cls._get_str_channel(channel)
-        log_type = log_type if log_type.endswith("_log") else log_type + "_log"
+        log_type = cls._get_normalized_log_type(log_type)
 
         logger.debug(f"Setting {log_type} channel on {guild} to <#{channel}>")
 
@@ -62,7 +73,7 @@ class LogChannels(Base):
     async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> str:
         """Obtain given `log_type` log channel for `guild` from the database."""
         guild = cls._get_str_guild(guild)
-        log_type = log_type if log_type.endswith("_log") else log_type + "_log"
+        log_type = cls._get_normalized_log_type(log_type)
 
         row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
         return getattr(row, log_type)
