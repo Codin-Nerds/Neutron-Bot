@@ -55,6 +55,7 @@ class Roles(Base):
         role: t.Union[str, int, Role],
     ) -> None:
         """Store given `role` as `role_type` role for on `guild` into the database."""
+        role_type = cls._get_normalized_role_type(role_type)
         guild = cls._get_str_guild(guild)
         role = cls._get_str_role(role)
 
