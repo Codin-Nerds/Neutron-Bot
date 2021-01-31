@@ -18,9 +18,9 @@ class Lock(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.previous_permissions = defaultdict(lambda: defaultdict(None))
+        # provide synchronous cache for `cog_unload` method
+        self.staff_roles = defaultdict(lambda: None)
         self.timer = Timer("channel_lock")
-        self.roles_db: Roles = Roles.reference()
-        self.permissions_db: Permissions = Permissions.reference()
 
     async def _lock(self, channel: TextChannel) -> t.Literal[-1, 0, 1]:
         """
@@ -32,7 +32,9 @@ class Lock(Cog):
         - 0: Channel was already silenced
         - -1: Channel was silenced manually
         """
-        default_role_id = self.roles_db.get_default_role(channel.guild)
+        default_role_id = await Roles.get_role(self.bot.db_session, "default", channel.guild)
+        if default_role_id is None:
+            default_role_id = channel.guild.default_role.id
         default_role = channel.guild.get_role(default_role_id)
         current_permissions = channel.overwrites_for(default_role)
         last_permissions = self.previous_permissions[channel.guild].get(channel)
@@ -46,6 +48,8 @@ class Lock(Cog):
             return -1
 
         self.previous_permissions[channel.guild][channel] = current_permissions
+        # Store staff role into dict in order to have it accessable for the synchronous `cog_unload` function
+        self.staff_roles[channel.guild] = await Roles.get_role(self.bot.db_session, "staff", channel.guild)
         await channel.set_permissions(default_role, **dict(current_permissions, send_messages=False))
 
         return 1
@@ -61,7 +65,9 @@ class Lock(Cog):
         -1: Channel was already unsilenced manually
         -2: Channel was silenced manually
         """
-        default_role_id = self.roles_db.get_default_role(channel.guild)
+        default_role_id = await Roles.get_role(self.bot.db_session, "default", channel.guild)
+        if default_role_id is None:
+            default_role_id = channel.guild.default_role.id
         default_role = channel.guild.get_role(default_role_id)
         current_permissions = channel.overwrites_for(default_role)
         last_permissions = self.previous_permissions[channel.guild].get(channel)
@@ -93,8 +99,8 @@ class Lock(Cog):
         if duration is None:
             duration = float("inf")
 
-        max_duration = await self.permissions_db.get_locktime(ctx.guild, ctx.author)
-        if max_duration != -1 and duration > max_duration:
+        max_duration = await Permissions.get_permission_from_member(self.bot.db_session, self.bot, "lock", ctx.guild, ctx.author)
+        if duration > max_duration:
             raise MissingPermissions(["sufficient_locktime"])
 
         logger.debug(f"Channel #{ctx.channel} was silenced by {ctx.author}.")
@@ -138,9 +144,11 @@ class Lock(Cog):
         self.timer.abort_all()
 
         for guild, channels in self.previous_permissions.items():
-            moderator_role_id = self.roles_db.get_staff_role(guild.id)
-            if moderator_role_id:
-                message = f"⚠️ <@&{moderator_role_id}> "
+            # Access staff role, to provide the ability to get it synchronously
+            # database read would be better, but that's an async operaion
+            staff_role_id = self.staff_roles[guild]
+            if staff_role_id:
+                message = f"⚠️ <@&{staff_role_id}> "
             else:
                 message = "⚠️ "
             message += "This channel was left locked after lock cog unloaded, performing automatic unlock."

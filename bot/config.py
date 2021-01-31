@@ -14,9 +14,8 @@ DATABASE = {
     "database": os.getenv("DATABASE_NAME"),
     "user": os.getenv("DATABASE_USER"),
     "password": os.getenv("DATABASE_PASSWORD"),
-    "min_size": int(os.getenv("POOL_MIN", "20")),
-    "max_size": int(os.getenv("POOL_MAX", "100")),
 }
+DATABASE_ENGINE_STRING = f"postgresql+asyncpg://{DATABASE['user']}:{DATABASE['password']}@{DATABASE['host']}/{DATABASE['database']}"
 
 # Prefix Settings
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ">>")
