@@ -3,6 +3,7 @@ import typing as t
 from discord import Guild, TextChannel
 from loguru import logger
 from sqlalchemy import Column, String
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database import Base, upsert
@@ -75,7 +76,16 @@ class LogChannels(Base):
         """Obtain defined log channels for given `guild` from the database."""
         guild = cls._get_str_guild(guild)
 
-        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
+        try:
+            row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
+        except NoResultFound:
+            return {
+                "server_log": None,
+                "mod_log": None,
+                "message_log": None,
+                "member_log": None,
+                "join_log": None,
+            }
         return {
             "server_log": int(row.server_log) if row.server_log else None,
             "mod_log": int(row.mod_log) if row.mod_log else None,

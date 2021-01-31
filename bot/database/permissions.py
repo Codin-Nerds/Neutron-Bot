@@ -95,12 +95,20 @@ class Permissions(Base):
         guild = cls._get_str_guild(guild)
         role = cls._get_str_role(role)
 
-        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, role=role).one())
-        return {
-            "ban_time": cls._return_time(row.ban_time),
-            "mute_time": cls._return_time(row.mute_time),
-            "lock_time": cls._return_time(row.lock_time),
-        }
+        try:
+            row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, role=role).one())
+        except NoResultFound:
+            return {
+                "ban_time": None,
+                "mute_time": None,
+                "lock_time": None,
+            }
+        else:
+            return {
+                "ban_time": cls._return_time(row.ban_time),
+                "mute_time": cls._return_time(row.mute_time),
+                "lock_time": cls._return_time(row.lock_time),
+            }
 
     @classmethod
     async def get_permission(
@@ -151,20 +159,25 @@ class Permissions(Base):
                 }
 
             # Follow the hierarchy from most important role to everyone
-            # and use the first found time, if none found, return empty permissions
+            # and use the first found time in each time type,
+            # if none found, return empty permissions
+            ban_time = None
+            mute_time = None
+            lock_time = None
             for role in member.roles[::-1]:
-                try:
-                    perms = await cls.get_permissions(session, guild, role)
-                except NoResultFound:
-                    continue
-                else:
-                    return perms
-            else:
-                return {
-                    "ban_time": None,
-                    "mute_time": None,
-                    "lock_time": None,
-                }
+                perms = await cls.get_permissions(session, guild, role)
+                if ban_time is None:
+                    ban_time = perms["ban_time"]
+                if mute_time is None:
+                    mute_time = perms["mute_time"]
+                if lock_time is None:
+                    lock_time = perms["lock_time"]
+
+            return {
+                "ban_time": ban_time,
+                "mute_time": mute_time,
+                "lock_time": lock_time,
+            }
 
     @classmethod
     async def get_permission_from_member(

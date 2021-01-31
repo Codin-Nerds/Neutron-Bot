@@ -3,6 +3,7 @@ import typing as t
 from discord import Guild, Role
 from loguru import logger
 from sqlalchemy import Column, String
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database import Base, upsert
@@ -27,13 +28,13 @@ class Roles(Base):
         return guild
 
     @staticmethod
-    def _get_str_role(channel: t.Union[str, int, Role]) -> str:
-        """Make sure `channel` parameter is string."""
-        if isinstance(channel, Role):
-            channel = str(channel.id)
-        if isinstance(channel, int):
-            channel = str(channel)
-        return channel
+    def _get_str_role(role: t.Union[str, int, Role]) -> str:
+        """Make sure `role` parameter is string."""
+        if isinstance(role, Role):
+            role = str(role.id)
+        if isinstance(role, int):
+            role = str(role)
+        return role
 
     @staticmethod
     def _get_normalized_role_type(role_type: str) -> str:
@@ -72,18 +73,25 @@ class Roles(Base):
     async def get_roles(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> dict:
         """Obtain roles on `guild` from the database."""
         guild = cls._get_str_guild(guild)
-
-        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
-        return {
-            "default_role": int(row.default_role) if row.default_role else None,
-            "muted_role": int(row.muted_role) if row.muted_role else None,
-            "staff_role": int(row.staff_role) if row.staff_role else None,
-        }
+        try:
+            row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
+        except NoResultFound:
+            return {
+                "default_role": None,
+                "muted_role": None,
+                "staff_role": None,
+            }
+        else:
+            return {
+                "default_role": int(row.default_role) if row.default_role else None,
+                "muted_role": int(row.muted_role) if row.muted_role else None,
+                "staff_role": int(row.staff_role) if row.staff_role else None,
+            }
 
     @classmethod
     async def get_role(cls, session: AsyncSession, role_type: str, guild: t.Union[str, int, Guild]) -> str:
         """Obtain`time_type` permissions for `role` on `guild` from the database."""
         role_type = cls._get_normalized_role_type(role_type)
 
-        permissions = await cls.get_roles(session, guild)
-        return permissions[role_type]
+        roles = await cls.get_roles(session, guild)
+        return roles[role_type]
