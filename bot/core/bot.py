@@ -46,7 +46,7 @@ class Bot(Base_Bot):
             # Keep recursively trying to connect to the database
             logger.error("Unable to connect to database, retrying in 5s")
             time.sleep(5)
-            await self.db_connect()
+            return await self.db_connect()
 
         return AsyncSession(bind=engine)
 
