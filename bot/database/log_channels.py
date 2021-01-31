@@ -70,10 +70,16 @@ class LogChannels(Base):
         )
 
     @classmethod
-    async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> str:
-        """Obtain given `log_type` log channel for `guild` from the database."""
+    async def get_log_channels(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> dict:
+        """Obtain defined log channels for given `guild` from the database."""
         guild = cls._get_str_guild(guild)
-        log_type = cls._get_normalized_log_type(log_type)
 
         row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
-        return getattr(row, log_type)
+        return dict(row)
+
+    @classmethod
+    async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> dict:
+        log_type = cls._get_normalized_time_type(log_type)
+
+        log_channels = await cls.get_log_channels(session, guild)
+        return log_channels[log_type]
