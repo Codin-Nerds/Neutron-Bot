@@ -78,3 +78,11 @@ class Roles(Base):
             "muted_role": int(row.muted_role) if row.muted_role else None,
             "staff_role": int(row.staff_role) if row.staff_role else None,
         }
+
+    @classmethod
+    async def get_role(cls, session: AsyncSession, role_type: str, guild: t.Union[str, int, Guild]) -> str:
+        """Obtain`time_type` permissions for `role` on `guild` from the database."""
+        role_type = cls._get_normalized_role_type(role_type)
+
+        permissions = await cls.get_roles(session, guild)
+        return permissions[role_type]
