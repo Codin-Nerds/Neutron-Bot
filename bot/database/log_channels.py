@@ -68,6 +68,7 @@ class LogChannels(Base):
             conflict_columns=["guild"],
             values={"guild": guild, log_type: channel}
         )
+        await session.commit()
 
     @classmethod
     async def get_log_channels(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> dict:
@@ -75,7 +76,13 @@ class LogChannels(Base):
         guild = cls._get_str_guild(guild)
 
         row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
-        return dict(row)
+        return {
+            "server_log": int(row.server_log) if row.server_log else None,
+            "mod_log": int(row.mod_log) if row.mod_log else None,
+            "message_log": int(row.message_log) if row.message_log else None,
+            "member_log": int(row.member_log) if row.member_log else None,
+            "join_log": int(row.join_log) if row.join_log else None,
+        }
 
     @classmethod
     async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> dict:
