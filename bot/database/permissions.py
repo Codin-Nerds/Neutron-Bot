@@ -46,7 +46,7 @@ class Permissions(Base):
         return time
 
     @staticmethod
-    def _return_time(time: int) -> t.Union[int, float]:
+    def _return_time(time: t.Optional[int]) -> t.Optional[t.Union[int, float]]:
         """Return infinity if number was -1, otherwise, return given number."""
         if time == -1:
             return float("inf")
@@ -85,6 +85,7 @@ class Permissions(Base):
             conflict_columns=["role", "guild"],
             values={"guild": guild, "role": role, time_type: time}
         )
+        await session.commit()
 
     @classmethod
     async def get_permissions(cls, session: AsyncSession, guild: t.Union[str, int, Guild], role: t.Union[str, int, Role]) -> dict:
@@ -93,10 +94,11 @@ class Permissions(Base):
         role = cls._get_str_role(role)
 
         row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, role=role).one())
-        row["ban_time"] = cls._return_time(row["ban_time"])
-        row["mute_time"] = cls._return_time(row["mute_time"])
-        row["lock_time"] = cls._return_time(row["lock_time"])
-        return dict(row)
+        return {
+            "ban_time": cls._return_time(row.ban_time),
+            "mute_time": cls._return_time(row.mute_time),
+            "lock_time": cls._return_time(row.lock_time),
+        }
 
     @classmethod
     async def get_permission(cls, session: AsyncSession, time_type: str, guild: t.Union[str, int, Guild], role: t.Union[str, int, Role]) -> str:
