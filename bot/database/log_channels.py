@@ -61,20 +61,11 @@ class LogChannels(Base):
         try:
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
         except NoResultFound:
-            return {
-                "server_log": None,
-                "mod_log": None,
-                "message_log": None,
-                "member_log": None,
-                "join_log": None,
-            }
-        return {
-            "server_log": int(row.server_log) if row.server_log else None,
-            "mod_log": int(row.mod_log) if row.mod_log else None,
-            "message_log": int(row.message_log) if row.message_log else None,
-            "member_log": int(row.member_log) if row.member_log else None,
-            "join_log": int(row.join_log) if row.join_log else None,
-        }
+            dct = {col: None for col in cls.__table__.columns.keys()}
+            dct.update({'guild': guild})
+            return dct
+        else:
+            return row.to_dict()
 
     @classmethod
     async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> dict:
@@ -82,3 +73,12 @@ class LogChannels(Base):
 
         log_channels = await cls.get_log_channels(session, guild)
         return log_channels[log_type]
+
+    def to_dict(self) -> dict:
+        dct = {}
+        for col in self.__table__.columns.keys():
+            val = getattr(self, col)
+            if col.endswith("_log"):
+                val = int(val) if val is not None else None
+            dct[col] = val
+        return dct

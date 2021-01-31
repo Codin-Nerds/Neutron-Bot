@@ -80,17 +80,11 @@ class Permissions(Base):
         try:
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, role=role).one())
         except NoResultFound:
-            return {
-                "ban_time": None,
-                "mute_time": None,
-                "lock_time": None,
-            }
+            dct = {col: None for col in cls.__table__.columns.keys()}
+            dct.update({'guild': guild, 'role': role})
+            return dct
         else:
-            return {
-                "ban_time": cls._return_time(row.ban_time),
-                "mute_time": cls._return_time(row.mute_time),
-                "lock_time": cls._return_time(row.lock_time),
-            }
+            return row.to_dict()
 
     @classmethod
     async def get_permission(
@@ -134,32 +128,21 @@ class Permissions(Base):
             # Administrators doesn't have limited permissions, makes sure
             # to handle for that
             if member.guild_permissions.administrator:
-                return {
-                    "ban_time": float("inf"),
-                    "mute_time": float("inf"),
-                    "lock_time": float("inf"),
-                }
+                dct = {col: float("inf") for col in cls.__table__.columns.keys()}
+                dct.update({'guild': guild})
+                return dct
 
             # Follow the hierarchy from most important role to everyone
             # and use the first found time in each time type,
             # if none found, return empty permissions
-            ban_time = None
-            mute_time = None
-            lock_time = None
+            dct = {col: None for col in cls.__table__.columns.keys() if col.endswith("_time")}
             for role in member.roles[::-1]:
                 perms = await cls.get_permissions(session, guild, role)
-                if ban_time is None:
-                    ban_time = perms["ban_time"]
-                if mute_time is None:
-                    mute_time = perms["mute_time"]
-                if lock_time is None:
-                    lock_time = perms["lock_time"]
-
-            return {
-                "ban_time": ban_time,
-                "mute_time": mute_time,
-                "lock_time": lock_time,
-            }
+                for key, value in dct:
+                    if value is not None:
+                        dct[key] = perms[key]
+            dct.update({'guild': guild})
+            return dct
 
     @classmethod
     async def get_permission_from_member(
@@ -174,3 +157,12 @@ class Permissions(Base):
 
         permissions = await cls.get_permissions_from_member(session, bot, guild, member)
         return permissions[time_type]
+
+    def to_dict(self) -> dict:
+        dct = {}
+        for col in self.__table__.columns.keys():
+            val = getattr(self, col)
+            if col.endswith("_time"):
+                val = self._return_time(val)
+            dct[col] = val
+        return dct

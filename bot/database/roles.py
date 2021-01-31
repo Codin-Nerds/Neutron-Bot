@@ -58,17 +58,11 @@ class Roles(Base):
         try:
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
         except NoResultFound:
-            return {
-                "default_role": None,
-                "muted_role": None,
-                "staff_role": None,
-            }
+            dct = {col: None for col in cls.__table__.columns.keys()}
+            dct.update({'guild': guild})
+            return dct
         else:
-            return {
-                "default_role": int(row.default_role) if row.default_role else None,
-                "muted_role": int(row.muted_role) if row.muted_role else None,
-                "staff_role": int(row.staff_role) if row.staff_role else None,
-            }
+            return row.to_dict()
 
     @classmethod
     async def get_role(cls, session: AsyncSession, role_type: str, guild: t.Union[str, int, Guild]) -> str:
@@ -77,3 +71,12 @@ class Roles(Base):
 
         roles = await cls.get_roles(session, guild)
         return roles[role_type]
+
+    def to_dict(self) -> dict:
+        dct = {}
+        for col in self.__table__.columns.keys():
+            val = getattr(self, col)
+            if col.endswith("_role"):
+                val = int(val) if val is not None else None
+            dct[col] = val
+        return dct
