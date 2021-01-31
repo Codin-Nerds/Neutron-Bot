@@ -144,7 +144,8 @@ class Lock(Cog):
         self.timer.abort_all()
 
         for guild, channels in self.previous_permissions.items():
-            # Access staff role stored in channels, to provide the ability to get it synchronously
+            # Access staff role, to provide the ability to get it synchronously
+            # database read would be better, but that's an async operaion
             staff_role_id = self.staff_roles[guild]
             if staff_role_id:
                 message = f"⚠️ <@&{staff_role_id}> "
