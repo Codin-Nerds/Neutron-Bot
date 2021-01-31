@@ -58,6 +58,8 @@ async def upsert(session: AsyncSession, model: Base, conflict_columns: list, val
     await session.execute(stmt, values)
 
 
+# region: Common getters for tables
+
 def get_str_guild(guild: t.Union[str, int, Guild]) -> str:
     """Make sure `guild` parameter is string."""
     if isinstance(guild, Guild):
@@ -83,3 +85,5 @@ def get_str_channel(channel: t.Union[str, int, TextChannel]) -> str:
     if isinstance(channel, int):
         channel = str(channel)
     return channel
+
+# endregion
