@@ -1,10 +1,12 @@
 import typing as t
 
-from discord import Guild, Role
+from discord import Guild, Member, Role
 from loguru import logger
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.core.bot import Bot
 from bot.database import Base, upsert
 
 
@@ -28,13 +30,13 @@ class Permissions(Base):
         return guild
 
     @staticmethod
-    def _get_str_role(channel: t.Union[str, int, Role]) -> str:
-        """Make sure `channel` parameter is string."""
-        if isinstance(channel, Role):
-            channel = str(channel.id)
-        if isinstance(channel, int):
-            channel = str(channel)
-        return channel
+    def _get_str_role(role: t.Union[str, int, Role]) -> str:
+        """Make sure `role` parameter is string."""
+        if isinstance(role, Role):
+            role = str(role.id)
+        if isinstance(role, int):
+            role = str(role)
+        return role
 
     @staticmethod
     def _get_int_time(time: t.Union[int, float]) -> int:
@@ -101,9 +103,79 @@ class Permissions(Base):
         }
 
     @classmethod
-    async def get_permission(cls, session: AsyncSession, time_type: str, guild: t.Union[str, int, Guild], role: t.Union[str, int, Role]) -> str:
+    async def get_permission(
+        cls,
+        session: AsyncSession,
+        time_type: str,
+        guild: t.Union[str, int, Guild],
+        role: t.Union[str, int, Role]
+    ) -> t.Optional[int]:
         """Obtain`time_type` permissions for `role` on `guild` from the database."""
         time_type = cls._get_normalized_time_type(time_type)
 
         permissions = await cls.get_permissions(session, guild, role)
+        return permissions[time_type]
+
+    @classmethod
+    async def get_permissions_from_member(
+        cls,
+        session: AsyncSession,
+        bot: Bot,
+        guild: t.Union[str, int, Guild],
+        member: t.Union[str, int, Member]
+    ) -> dict:
+        if isinstance(guild, str):
+            guild = int(guild)
+        if isinstance(member, str):
+            member = int(member)
+
+        if isinstance(member, int):
+            user = bot.get_user(member)
+            if not user:
+                raise ValueError(f"Unable to find valid user by: {member}")
+            if isinstance(guild, int):
+                true_guild = bot.get_guild(guild)
+                if not true_guild:
+                    raise ValueError(f"Unable to find a guild with id: {guild}")
+
+            member = guild.get_member(user)
+
+        if isinstance(member, Member):
+            # Administrators doesn't have limited permissions, makes sure
+            # to handle for that
+            if member.guild_permissions.administrator:
+                return {
+                    "ban_time": float("inf"),
+                    "mute_time": float("inf"),
+                    "lock_time": float("inf"),
+                }
+
+            # Follow the hierarchy from most important role to everyone
+            # and use the first found time, if none found, return empty permissions
+            for role in member.roles[::-1]:
+                try:
+                    perms = await cls.get_permissions(session, guild, role)
+                except NoResultFound:
+                    continue
+                else:
+                    return perms
+            else:
+                return {
+                    "ban_time": None,
+                    "mute_time": None,
+                    "lock_time": None,
+                }
+
+    @classmethod
+    async def get_permission_from_member(
+        cls,
+        session: AsyncSession,
+        bot: Bot,
+        time_type: str,
+        guild: t.Union[str, int, Guild],
+        member: t.Union[str, int, Member]
+    ) -> t.Optional[int]:
+        time_type = cls._get_normalized_time_type(time_type)
+
+        permissions = await cls.get_permissions_from_member(session, bot, guild, member)
         return permissions[time_type]
