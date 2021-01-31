@@ -6,7 +6,7 @@ from sqlalchemy import Column, String
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.database import Base, upsert
+from bot.database import Base, get_str_channel, get_str_guild, upsert
 
 
 class LogChannels(Base):
@@ -19,24 +19,6 @@ class LogChannels(Base):
     message_log = Column(String, nullable=True)
     member_log = Column(String, nullable=True)
     join_log = Column(String, nullable=True)
-
-    @staticmethod
-    def _get_str_guild(guild: t.Union[str, int, Guild]) -> str:
-        """Make sure `guild` parameter is string."""
-        if isinstance(guild, Guild):
-            guild = str(guild.id)
-        if isinstance(guild, int):
-            guild = str(guild)
-        return guild
-
-    @staticmethod
-    def _get_str_channel(channel: t.Union[str, int, TextChannel]) -> str:
-        """Make sure `channel` parameter is string."""
-        if isinstance(channel, TextChannel):
-            channel = str(channel.id)
-        if isinstance(channel, int):
-            channel = str(channel)
-        return channel
 
     @classmethod
     def _get_normalized_log_type(log_type: str) -> str:
@@ -58,8 +40,8 @@ class LogChannels(Base):
         channel: t.Union[str, int, TextChannel]
     ) -> None:
         """Store given `channel` as `log_type` log channel for `guild` into the database."""
-        guild = cls._get_str_guild(guild)
-        channel = cls._get_str_channel(channel)
+        guild = get_str_guild(guild)
+        channel = get_str_channel(channel)
         log_type = cls._get_normalized_log_type(log_type)
 
         logger.debug(f"Setting {log_type} channel on {guild} to <#{channel}>")
@@ -74,7 +56,7 @@ class LogChannels(Base):
     @classmethod
     async def get_log_channels(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> dict:
         """Obtain defined log channels for given `guild` from the database."""
-        guild = cls._get_str_guild(guild)
+        guild = get_str_guild(guild)
 
         try:
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())

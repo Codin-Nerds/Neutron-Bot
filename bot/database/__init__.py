@@ -2,6 +2,7 @@ import os
 import pathlib
 import typing as t
 
+from discord import Guild, Role, TextChannel
 from loguru import logger
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,3 +56,30 @@ async def upsert(session: AsyncSession, model: Base, conflict_columns: list, val
     )
 
     await session.execute(stmt, values)
+
+
+def get_str_guild(guild: t.Union[str, int, Guild]) -> str:
+    """Make sure `guild` parameter is string."""
+    if isinstance(guild, Guild):
+        guild = str(guild.id)
+    if isinstance(guild, int):
+        guild = str(guild)
+    return guild
+
+
+def get_str_role(role: t.Union[str, int, Role]) -> str:
+    """Make sure `role` parameter is string."""
+    if isinstance(role, Role):
+        role = str(role.id)
+    if isinstance(role, int):
+        role = str(role)
+    return role
+
+
+def get_str_channel(channel: t.Union[str, int, TextChannel]) -> str:
+    """Make sure `channel` parameter is string."""
+    if isinstance(channel, TextChannel):
+        channel = str(channel.id)
+    if isinstance(channel, int):
+        channel = str(channel)
+    return channel

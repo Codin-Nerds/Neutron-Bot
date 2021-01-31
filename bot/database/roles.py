@@ -6,7 +6,7 @@ from sqlalchemy import Column, String
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.database import Base, upsert
+from bot.database import Base, get_str_guild, get_str_role, upsert
 
 
 class Roles(Base):
@@ -17,24 +17,6 @@ class Roles(Base):
     default_role = Column(String, nullable=True)
     muted_role = Column(String, nullable=True)
     staff_role = Column(String, nullable=True)
-
-    @staticmethod
-    def _get_str_guild(guild: t.Union[str, int, Guild]) -> str:
-        """Make sure `guild` parameter is string."""
-        if isinstance(guild, Guild):
-            guild = str(guild.id)
-        if isinstance(guild, int):
-            guild = str(guild)
-        return guild
-
-    @staticmethod
-    def _get_str_role(role: t.Union[str, int, Role]) -> str:
-        """Make sure `role` parameter is string."""
-        if isinstance(role, Role):
-            role = str(role.id)
-        if isinstance(role, int):
-            role = str(role)
-        return role
 
     @staticmethod
     def _get_normalized_role_type(role_type: str) -> str:
@@ -57,8 +39,8 @@ class Roles(Base):
     ) -> None:
         """Store given `role` as `role_type` role for on `guild` into the database."""
         role_type = cls._get_normalized_role_type(role_type)
-        guild = cls._get_str_guild(guild)
-        role = cls._get_str_role(role)
+        guild = get_str_guild(guild)
+        role = get_str_role(role)
 
         logger.debug(f"Setting {role_type} on {guild} to {role}")
 
@@ -72,7 +54,7 @@ class Roles(Base):
     @classmethod
     async def get_roles(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> dict:
         """Obtain roles on `guild` from the database."""
-        guild = cls._get_str_guild(guild)
+        guild = get_str_guild(guild)
         try:
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
         except NoResultFound:

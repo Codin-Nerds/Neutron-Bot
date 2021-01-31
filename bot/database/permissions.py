@@ -7,7 +7,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.bot import Bot
-from bot.database import Base, upsert
+from bot.database import Base, get_str_guild, get_str_role, upsert
 
 
 class Permissions(Base):
@@ -19,24 +19,6 @@ class Permissions(Base):
     ban_time = Column(Integer, nullable=True)
     mute_time = Column(Integer, nullable=True)
     lock_time = Column(Integer, nullable=True)
-
-    @staticmethod
-    def _get_str_guild(guild: t.Union[str, int, Guild]) -> str:
-        """Make sure `guild` parameter is string."""
-        if isinstance(guild, Guild):
-            guild = str(guild.id)
-        if isinstance(guild, int):
-            guild = str(guild)
-        return guild
-
-    @staticmethod
-    def _get_str_role(role: t.Union[str, int, Role]) -> str:
-        """Make sure `role` parameter is string."""
-        if isinstance(role, Role):
-            role = str(role.id)
-        if isinstance(role, int):
-            role = str(role)
-        return role
 
     @staticmethod
     def _get_int_time(time: t.Union[int, float]) -> int:
@@ -75,8 +57,8 @@ class Permissions(Base):
         time: t.Union[int, float]
     ) -> None:
         """Store given `time` as `time_type` permission for `role` on `guild` into the database."""
-        guild = cls._get_str_guild(guild)
-        role = cls._get_str_role(role)
+        guild = get_str_guild(guild)
+        role = get_str_role(role)
         time_type = cls._get_normalized_time_type(time_type)
         time = cls._get_int_time(time)
 
@@ -92,8 +74,8 @@ class Permissions(Base):
     @classmethod
     async def get_permissions(cls, session: AsyncSession, guild: t.Union[str, int, Guild], role: t.Union[str, int, Role]) -> dict:
         """Obtain permissions for `role` on `guild` from the database."""
-        guild = cls._get_str_guild(guild)
-        role = cls._get_str_role(role)
+        guild = get_str_guild(guild)
+        role = get_str_role(role)
 
         try:
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, role=role).one())
