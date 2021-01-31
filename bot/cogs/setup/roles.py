@@ -10,32 +10,32 @@ from bot.database.roles import Roles
 class RolesSetup(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.roles_db: Roles = Roles.reference()
 
     @command(aliases=["defaultrole"])
     async def default_role(self, ctx: Context, role: RoleConverter) -> None:
         """Setup default role."""
-        await self.roles_db.set_default_role(ctx.guild, role)
+        await Roles.set_role(self.bot.db_session, "default", ctx.guild, role)
         await ctx.send(":white_check_mark: Role updated.")
 
     @command(aliases=["staffrole"])
     async def staff_role(self, ctx: Context, role: RoleConverter) -> None:
         """Setup the staff role."""
-        await self.roles_db.set_staff_role(ctx.guild, role)
+        await Roles.set_role(self.bot.db_session, "staff", ctx.guild, role)
         await ctx.send(":white_check_mark: Role updated.")
 
     @command(aliases=["mutedrole"])
     async def muted_role(self, ctx: Context, role: RoleConverter) -> None:
         """Setup the muted role."""
-        await self.roles_db.set_muted_role(ctx.guild, role)
+        await Roles.set_role(self.bot.db_session, "muted", ctx.guild, role)
         await ctx.send(":white_check_mark: Role updated.")
 
     @command(aliases=["showroles"])
     async def show_roles(self, ctx: Context) -> None:
         """Show configured roles in the server."""
-        default = ctx.guild.get_role(self.roles_db.get_default_role(ctx.guild))
-        staff = ctx.guild.get_role(self.roles_db.get_staff_role(ctx.guild))
-        muted = ctx.guild.get_role(self.roles_db.get_muted_role(ctx.guild))
+        roles = await Roles.get_roles(self.bot.db_session, ctx.guild)
+        default = ctx.guild.get_role(roles["default_role"])
+        staff = ctx.guild.get_role(roles["staff_role"])
+        muted = ctx.guild.get_role(roles["muted_role"])
 
         if isinstance(default, Role):
             default = default.mention
