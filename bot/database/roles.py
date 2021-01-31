@@ -1,91 +1,80 @@
 import typing as t
-from dataclasses import dataclass
 
 from discord import Guild, Role
 from loguru import logger
+from sqlalchemy import Column, String
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.bot import Bot
-from bot.database import DBTable, Database
-
-
-@dataclass
-class Entry:
-    """Class for storing the database rows of roles table."""
-    _default: int
-    muted: int
-    staff: int
+from bot.database import Base, upsert
 
 
-class Roles(DBTable):
-    """
-    This table stores all guild-specific roles:
-    * `default` role (column is named `_default` to avoid SQL confusion)
-    * `muted` role
-    * `staff` role
-    Under the single `serverid` column
-    """
-    columns = {
-        "serverid": "NUMERIC(40) UNIQUE NOT NULL",
-        "_default": "NUMERIC(40) DEFAULT 0",
-        "muted": "NUMERIC(40) DEFAULT 0",
-        "staff": "NUMERIC(40) DEFAULT 0",
-    }
-    caching = {
-        "key": (int, "serverid"),
+class Roles(Base):
+    __tablename__ = "roles"
 
-        "_default": (int, 0),
-        "muted": (int, 0),
-        "staff": (int, 0)
-    }
+    guild = Column('guild', String, primary_key=True, nullable=False)
 
-    def __init__(self, bot: Bot, database: Database):
-        super().__init__(database, "roles")
-        self.bot = bot
-        self.database = database
+    default_role = Column('default_role', String, nullable=True)
+    muted_role = Column('muted_role', String, nullable=True)
+    staff_role = Column('staff_role', String, nullable=True)
 
-    async def _set_role(self, role_name: str, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
-        """Set a `role_name` column to store `role` for the specific `guild`."""
+    @staticmethod
+    def _get_str_guild(guild: t.Union[str, int, Guild]) -> str:
+        """Make sure `guild` parameter is string."""
         if isinstance(guild, Guild):
-            guild = guild.id
-        if isinstance(role, Role):
-            role = role.id
+            guild = str(guild.id)
+        if isinstance(guild, int):
+            guild = str(guild)
+        return guild
 
-        logger.debug(f"Setting {role_name} role on {guild} to <@&{role}>")
-        await self.db_upsert(
-            columns=["serverid", role_name],
-            values=[guild, role],
-            conflict_columns=["serverid"]
+    @staticmethod
+    def _get_str_role(channel: t.Union[str, int, Role]) -> str:
+        """Make sure `channel` parameter is string."""
+        if isinstance(channel, Role):
+            channel = str(channel.id)
+        if isinstance(channel, int):
+            channel = str(channel)
+        return channel
+
+    @staticmethod
+    def _get_normalized_role_type(role_type: str) -> str:
+        """Make sure `role_type` is in proper format and is valid."""
+        role_type = role_type if role_type.endswith("_role") else role_type + "_role"
+
+        valid_role_types = ["default_role", "muted_role", "staff_role"]
+        if role_type not in valid_role_types:
+            raise ValueError(f"`role_type` received invalid type: {role_type}, valid types: {', '.join(valid_role_types)}")
+
+        return role_type
+
+    @classmethod
+    async def set_role(
+        cls,
+        session: AsyncSession,
+        role_type: str,
+        guild: t.Union[str, int, Guild],
+        role: t.Union[str, int, Role],
+    ) -> None:
+        """Store given `role` as `role_type` role for on `guild` into the database."""
+        guild = cls._get_str_guild(guild)
+        role = cls._get_str_role(role)
+
+        logger.debug(f"Setting {role_type} on {guild} to {role}")
+
+        await upsert(
+            session, cls,
+            conflict_columns=["guild"],
+            values={"guild": guild, role_type: role}
         )
-        self.cache_update(guild, role_name, role)
+        await session.commit()
 
-    def _get_role(self, role_name: str, guild: t.Union[Guild, int]) -> int:
-        """Get a `role_name` column for specific `guild` from cache."""
-        if isinstance(guild, Guild):
-            guild = guild.id
-        return self.cache_get(guild, role_name)
+    @classmethod
+    async def get_roles(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> dict:
+        """Obtain roles on `guild` from the database."""
+        guild = cls._get_str_guild(guild)
 
-    async def set_default_role(self, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
-        await self._set_role("_default", guild, role)
-
-    async def set_muted_role(self, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
-        await self._set_role("muted", guild, role)
-
-    async def set_staff_role(self, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> None:
-        await self._set_role("staff", guild, role)
-
-    def get_default_role(self, guild: t.Union[Guild, int]) -> int:
-        role = self._get_role("_default", guild)
-        if role == 0:
-            role = guild.default_role.id
-
-        return role
-
-    def get_muted_role(self, guild: t.Union[Guild, int]) -> int:
-        return self._get_role("muted", guild)
-
-    def get_staff_role(self, guild: t.Union[Guild, int]) -> int:
-        return self._get_role("staff", guild)
-
-
-async def load(bot: Bot, database: Database) -> None:
-    await database.add_table(Roles(bot, database))
+        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
+        return {
+            "default_role": int(row.default_role) if row.default_role else None,
+            "muted_role": int(row.muted_role) if row.muted_role else None,
+            "staff_role": int(row.staff_role) if row.staff_role else None,
+        }
