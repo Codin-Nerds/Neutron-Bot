@@ -1,11 +1,11 @@
 import json
 import typing as t
 from collections import defaultdict
-from contextlib import suppress
 
-from discord import Embed, Forbidden, Member, TextChannel
+from discord import Embed, Member, TextChannel
 from discord.errors import HTTPException
 from discord.ext.commands import Cog, ColourConverter, Context, MessageConverter, group
+from discord.ext.commands.errors import CheckFailure
 
 from bot.core.bot import Bot
 from bot.core.converters import Unicode
@@ -322,16 +322,13 @@ class Embeds(Cog):
 
     @embed_group.command()
     async def message_dump(self, ctx: Context, channel: TextChannel, message_id: int) -> None:
-        """Dump an embed with it's ID."""
+        """Dump JSON of embed in message (by ID)."""
         member = channel.server and channel.server.get_member(ctx.message.author.id)
 
         if channel != ctx.message.channel and not member:
-            await ctx.send("Private Channel, or Invalid Server.")
-            return
+            raise CheckFailure("Channel you're trying to access is private or invalid.")
 
-        with suppress(Forbidden):
-            msg = await self.bot.get_message(channel, str(message_id))
-
+        msg = await self.bot.get_message(channel, str(message_id))
         if msg.author.id != self.bot.user.id:
             await ctx.send("Invalid User's Message.")
             return
