@@ -12,11 +12,11 @@ from bot.database import Base, upsert
 class Roles(Base):
     __tablename__ = "roles"
 
-    guild = Column('guild', String, primary_key=True, nullable=False)
+    guild = Column(String, primary_key=True, nullable=False)
 
-    default_role = Column('default_role', String, nullable=True)
-    muted_role = Column('muted_role', String, nullable=True)
-    staff_role = Column('staff_role', String, nullable=True)
+    default_role = Column(String, nullable=True)
+    muted_role = Column(String, nullable=True)
+    staff_role = Column(String, nullable=True)
 
     @staticmethod
     def _get_str_guild(guild: t.Union[str, int, Guild]) -> str:

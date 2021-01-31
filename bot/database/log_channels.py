@@ -12,13 +12,13 @@ from bot.database import Base, upsert
 class LogChannels(Base):
     __tablename__ = "log_channels"
 
-    guild = Column('guild', String, primary_key=True, nullable=False)
+    guild = Column(String, primary_key=True, nullable=False)
 
-    server_log = Column('server_log', String, nullable=True)
-    mod_log = Column('mod_log', String, nullable=True)
-    message_log = Column('message_log', String, nullable=True)
-    member_log = Column('member_log', String, nullable=True)
-    join_log = Column('join_log', String, nullable=True)
+    server_log = Column(String, nullable=True)
+    mod_log = Column(String, nullable=True)
+    message_log = Column(String, nullable=True)
+    member_log = Column(String, nullable=True)
+    join_log = Column(String, nullable=True)
 
     @staticmethod
     def _get_str_guild(guild: t.Union[str, int, Guild]) -> str:

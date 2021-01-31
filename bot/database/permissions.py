@@ -13,12 +13,12 @@ from bot.database import Base, upsert
 class Permissions(Base):
     __tablename__ = "permissions"
 
-    guild = Column('guild', String, primary_key=True, nullable=False)
-    role = Column('role', String, primary_key=True, nullable=False)
+    guild = Column(String, primary_key=True, nullable=False)
+    role = Column(String, primary_key=True, nullable=False)
 
-    ban_time = Column('ban_time', Integer, nullable=True)
-    mute_time = Column('mute_time', Integer, nullable=True)
-    lock_time = Column('lock_time', Integer, nullable=True)
+    ban_time = Column(Integer, nullable=True)
+    mute_time = Column(Integer, nullable=True)
+    lock_time = Column(Integer, nullable=True)
 
     @staticmethod
     def _get_str_guild(guild: t.Union[str, int, Guild]) -> str:
