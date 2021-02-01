@@ -1,202 +1,160 @@
 import typing as t
-from dataclasses import dataclass
 
 from discord import Guild, Member, User
 from loguru import logger
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.core.bot import Bot
-from bot.database import DBTable, Database
-
-
-@dataclass
-class Entry:
-    """Class for storing the database rows of roles table."""
-    serverid: int
-    strike_id: int
-    author: int
-    subject: int
-    strike_type: str
-    reason: str
+from bot.database import Base, get_str_guild, get_str_user, upsert
 
 
-class StrikeIndex(DBTable):
-    """
-    --if serverid=1 already exists
-    with upd as (update strike_index set nextid = nextid + 1 where serverid = $1 returning nextid),
-    ins (insert into strikes (strike_id, serverid) values ((select * from upd), $1) returning *)
-    select * from ins;
-    """
-    columns = {
-        "serverid": "NUMERIC(40) NOT NULL PRIMARY KEY",
-        "nextid": "INTEGER NOT NULL DEFAULT 0"
-    }
+class StrikeIndex(Base):
+    __tablename__ = "strike_index"
 
-    def __init__(self, bot: Bot, database: Database):
-        super().__init__(database, "strike_idex")
-        self.bot = bot
-        self.database = database
+    guild = Column(String, primary_key=True, nullable=False)
+    next_id = Column(Integer, nullable=False, default=0)
 
-    async def get_id(self, guild: t.Union[Guild, int]) -> int:
-        if isinstance(guild, Guild):
-            guild = guild.id
+    @classmethod
+    async def get_id(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> int:
+        guild = get_str_guild(guild)
 
-        sql = f"""
-        WITH upd AS(
-            INSERT INTO {self.table} (serverid, nextid)
-            VALUES ($1, $2)
-            ON CONFLICT (serverid) DO
-            UPDATE SET nextid = EXCLUDED.nextid + 1
-            RETURNING nextid
-        )
-        SELECT * FROM upd
-        """
-
-        await self.db_fetch(sql, [guild, 0])
+        # Logic for increasing strike ID if it was already found
+        # but using the default if the entry is new
+        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
+        next_id = row.next_id + 1
+        row.next_id = next_id
+        await session.commit()
+        return next_id
 
 
-class Strikes(DBTable):
-    """
-    This table stores all strikes/infractions in each guild.
-    * `author` ID of user who gave the infraction
-    * `subject` ID of user who received the strike
-    * `reason` optional reason string
-    For given `strike_id` in given`serverid`
-    """
-    columns = {
-        "serverid": "NUMERIC(40) NOT NULL",
-        "strike_id": "SERIAL NOT NULL",
-        "author": "NUMERIC(40) DEFAULT 0",
-        "subject": "NUMERIC(40) DEFAULT 0",
-        "strike_type": "TEXT NOT NULL",
-        "reason": "TEXT",
-        "UNIQUE": "(serverid, strike_id)"
-    }
+class Strikes(Base):
+    __tablename__ = "strikes"
 
-    def __init__(self, bot: Bot, database: Database):
-        super().__init__(database, "strikes")
-        self.bot = bot
-        self.database = database
-        self.index_table = StrikeIndex.reference()
+    guild = Column(String, primary_key=True, nullable=False)
+    id = Column(Integer, primary_key=True, nullable=False)
 
-    async def add_strike(
-        self,
-        guild: t.Union[Guild, int],
-        author: t.Union[Member, User, int],
-        subject: t.Union[Member, User, int],
+    author = Column(String, nullable=False)
+    user = Column(String, nullable=False)
+    type = Column(String, nullable=False)
+    reason = Column(String, nullable=True)
+
+    @classmethod
+    async def set_strike(
+        cls,
+        session: AsyncSession,
+        guild: t.Union[str, int, Guild],
+        author: t.Union[str, int, Member],
+        user: t.Union[str, int, Member, User],
         strike_type: str,
-        reason: str = "None"
+        reason: t.Optional[str],
+        strike_id: t.Optional[int] = None
     ) -> int:
-        """
-        Set a `role_name` column to store `role` for the specific `guild`.
+        guild = get_str_guild(guild)
+        author = get_str_user(author)
+        user = get_str_user(user)
 
-        This will return the resulting strike id.
-        """
-        if isinstance(guild, Guild):
-            guild = guild.id
-        if isinstance(subject, Member) or isinstance(subject, User):
-            subject = subject.id
-        if isinstance(author, Member) or isinstance(author, User):
-            author = author.id
+        # We don't usually expect we have passed id, instead we're determining
+        # which ID should be used from the index table to keep the strikes serial
+        # with their specific guild, if strike is specified, it means we're updating
+        if not strike_id:
+            strike_id = await StrikeIndex.get_id(session, guild)
 
-        logger.debug(f"Adding {strike_type} strike to {subject} from {author} for {reason}")
-        strike_id_record = await self.db_set_return(
-            columns=["serverid", "author", "subject", "strike_type", "reason"],
-            values=[guild, author, subject, strike_type, reason],
-            return_columns=["strike_id"]
+        logger.debug(f"Adding {strike_type} strike to {user} from {author} for {reason}: id: {strike_id}")
+
+        await upsert(
+            session, cls,
+            conflict_columns=["guild", "id"],
+            values={
+                "guild": guild,
+                "id": strike_id,
+                "author": author,
+                "user": user,
+                "type": strike_type,
+                "reason": reason
+            }
         )
+        await session.commit()
+        return strike_id
 
-        return strike_id_record[0]
+    @classmethod
+    async def remove_strike(cls, session: AsyncSession, guild: t.Union[str, int, Guild], strike_id: int) -> dict:
+        guild = get_str_guild(guild)
 
-    async def get_strike(self, guild: t.Union[Guild, int], strike_id: int) -> int:
-        """Get a `role_name` column for specific `guild` from cache."""
-        if isinstance(guild, Guild):
-            guild = guild.id
+        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, id=strike_id).one())
+        dct = row.to_dict()
+        await session.run_sync(lambda session: session.delete(row))
 
-        record = await self.db_get(
-            columns=["author", "subject", "strike_type", "reason"],
-            specification="serverid=$1 AND strike_id=$2",
-            sql_args=[guild, strike_id]
-        )
+        logger.debug(f"Strike {strike_id} has been removed")
+
+        return dct
+
+    @classmethod
+    async def get_user_strikes(cls, session: AsyncSession, guild: t.Union[str, int, Guild], user: t.Union[str, int, Member, User]) -> list:
+        """Obtain all strikes on `guild` for `user` from the database."""
+        guild = get_str_guild(guild)
+        user = get_str_user(user)
 
         try:
-            return record[0]
-        except TypeError:
-            return None
+            rows = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, user=user).all())
+        except NoResultFound:
+            return []
+        else:
+            strikes = []
+            for row in rows:
+                strikes.append(row.to_dict())
+            return strikes
 
-    async def update_strike(
-        self,
-        guild: t.Union[Guild, int],
-        strike_id: int,
-        author: t.Union[Member, User, int],
-        subject: t.Union[Member, User, int],
-        strike_type: str,
-        reason: str
-    ) -> None:
-        """Set a `role_name` column to store `role` for the specific `guild`."""
-        if isinstance(guild, Guild):
-            guild = guild.id
-        if isinstance(subject, Member) or isinstance(subject, User):
-            subject = subject.id
-        if isinstance(author, Member) or isinstance(author, User):
-            author = author.id
-
-        logger.debug(f"Adding {strike_type} strike to {subject} from {author} for {reason}")
-        await self.db_upsert(
-            columns=["serverid", "strike_id", "author", "subject", "strike_type", "reason"],
-            values=[guild, strike_id, author, subject, strike_type, reason],
-            conflict_columns=["serverid", "strike_id"]
-        )
-
-    async def get_guild_strikes(self, guild: t.Union[Guild, int]) -> t.List[Entry]:
-        if isinstance(guild, Guild):
-            guild = guild.id
-
-        record = await self.db_get(
-            columns=["strike_id", "author", "subject", "strike_type", "reason"],
-            specification="serverid=$1",
-            sql_args=[guild]
-        )
+    @classmethod
+    async def get_author_strikes(cls, session: AsyncSession, guild: t.Union[str, int, Guild], author: t.Union[str, int, Member, User]) -> list:
+        """Obtain all strikes on `guild` by `author` from the database."""
+        guild = get_str_guild(guild)
+        author = get_str_user(author)
 
         try:
-            return record[0]
-        except TypeError:
-            return None
+            rows = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, author=author).all())
+        except NoResultFound:
+            return []
+        else:
+            strikes = []
+            for row in rows:
+                strikes.append(row.to_dict())
+            return strikes
 
-    async def get_user_strikes(self, guild: t.Union[Guild, int], subject: t.Union[Member, User, int]) -> t.List[Entry]:
-        if isinstance(guild, Guild):
-            guild = guild.id
-        if isinstance(subject, Member) or isinstance(subject, User):
-            subject = subject.id
-
-        record = await self.db_get(
-            columns=["strike_id", "author", "subject", "strike_type", "reason"],
-            specification="serverid=$1 AND subject=$2",
-            sql_args=[guild, subject]
-        )
+    @classmethod
+    async def get_strike_by_id(cls, session: AsyncSession, guild: t.Union[str, int, Guild], strike_id: int) -> dict:
+        """Obtain specific strike in `guild` with id of `strike_id` from the database."""
+        guild = get_str_guild(guild)
 
         try:
-            return record[0]
-        except TypeError:
-            return None
+            row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, id=strike_id).one())
+        except NoResultFound:
+            dct = {col: None for col in cls.__table__.columns.keys()}
+            dct.update({'guild': guild, 'id': strike_id})
+            return dct
+        else:
+            return row.to_dict()
 
-    async def get_authored_strikes(self, guild: t.Union[Guild, int], author: t.Union[Member, User, int]) -> t.List[Entry]:
-        if isinstance(guild, Guild):
-            guild = guild.id
-        if isinstance(author, Member) or isinstance(author, User):
-            author = author.id
-
-        record = await self.db_get(
-            columns=["strike_id", "author", "subject", "strike_type", "reason"],
-            specification="serverid=$1 AND author=$2",
-            sql_args=[guild, author]
-        )
+    @classmethod
+    async def get_guild_strikes(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> list:
+        """Obtain all strikes belonging to `guild` from the database."""
+        guild = get_str_guild(guild)
 
         try:
-            return record[0]
-        except TypeError:
-            return None
+            rows = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).all())
+        except NoResultFound:
+            return []
+        else:
+            strikes = []
+            for row in rows:
+                strikes.append(row.to_dict())
+            return strikes
 
-
-async def load(bot: Bot, database: Database) -> None:
-    await database.add_table(Strikes(bot, database))
-    await database.add_table(StrikeIndex(bot, database))
+    def to_dict(self) -> dict:
+        dct = {}
+        for col in self.__table__.columns.keys():
+            val = getattr(self, col)
+            if col in ("user", "author"):
+                val = int(val) if val is not None else None
+            dct[col] = val
+        return dct
