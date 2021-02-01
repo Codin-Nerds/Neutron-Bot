@@ -12,7 +12,6 @@ from bot.utils.time import stringify_duration
 class PermissionsSetup(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.permissions_db: Permissions = Permissions.reference()
 
     @command(aliases=["bantime"])
     async def ban_time(self, ctx: Context, role: RoleConverter, duration: Duration) -> None:
@@ -22,7 +21,7 @@ class PermissionsSetup(Cog):
         If user have multiple roles with different ban times,
         the ban time for role higher in the hierarchy will be preferred.
         """
-        await self.permissions_db.set_bantime(ctx.guild, role, duration)
+        await Permissions.set_role_permission(self.bot.db_session, "ban", ctx.guild, role, duration)
         await ctx.send(":white_check_mark: Permissions updated.")
 
     @command(aliases=["mutetime"])
@@ -33,7 +32,7 @@ class PermissionsSetup(Cog):
         If user have multiple roles with different mute times,
         the mute time for role higher in the hierarchy will be preferred.
         """
-        await self.permissions_db.set_mutetime(ctx.guild, role, duration)
+        await Permissions.set_role_permission(self.bot.db_session, "mute", ctx.guild, role, duration)
         await ctx.send(":white_check_mark: Permissions updated.")
 
     @command(aliases=["locktime"])
@@ -44,22 +43,17 @@ class PermissionsSetup(Cog):
         If user have multiple roles with different lock times,
         the lock time for role higher in the hierarchy will be preferred.
         """
-        await self.permissions_db.set_locktime(ctx.guild, role, duration)
+        await Permissions.set_role_permission(self.bot.db_session, "lock", ctx.guild, role, duration)
         await ctx.send(":white_check_mark: Permissions updated.")
 
     @command(aliases=["showpermissions"])
     async def show_permissions(self, ctx: Context, role: RoleConverter) -> None:
         """Show configured role permissions for the given `role`"""
-        ban_time = await self.permissions_db.get_bantime(ctx.guild, role)
-        mute_time = await self.permissions_db.get_mutetime(ctx.guild, role)
-        lock_time = await self.permissions_db.get_locktime(ctx.guild, role)
+        permissions = await Permissions.get_permissions(self.bot.db_session, ctx.guild, role)
 
-        if ban_time:
-            ban_time = stringify_duration(ban_time)
-        if mute_time:
-            mute_time = stringify_duration(mute_time)
-        if lock_time:
-            lock_time = stringify_duration(lock_time)
+        ban_time = stringify_duration(permissions["ban_time"]) if permissions["ban_time"] else None
+        mute_time = stringify_duration(permissions["mute_time"]) if permissions["mute_time"] else None
+        lock_time = stringify_duration(permissions["lock_time"]) if permissions["lock_time"] else None
 
         embed = Embed(
             description=textwrap.dedent(

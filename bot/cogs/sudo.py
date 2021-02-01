@@ -41,11 +41,11 @@ class Sudo(Cog):
 
     async def _manage_cog(self, ctx: Context, process: str, extension: t.Optional[str] = None) -> None:
         if not extension:
-            extension = self.bot.extension_list
+            extensions = self.bot.extension_list
         else:
-            extension = [f"bot.cogs.{extension}"]
+            extensions = [f"bot.cogs.{extension}"]
 
-        for ext in extension:
+        for ext in extensions:
             try:
                 if process == "load":
                     self.bot.load_extension(ext)

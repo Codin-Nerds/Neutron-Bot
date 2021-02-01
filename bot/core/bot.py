@@ -1,18 +1,21 @@
 import time
+import typing as t
 from datetime import datetime
 
 import aiohttp
 from discord.ext.commands import AutoShardedBot as Base_Bot
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from bot import config
-from bot.database import Database
+from bot.database import Base as DbBase
+from bot.database import load_tables
 
 
 class Bot(Base_Bot):
     """Subclassed Neutron bot."""
 
-    def __init__(self, extensions: list, db_tables: list, *args, **kwargs) -> None:
+    def __init__(self, extensions: t.List[str], db_tables: list, *args, **kwargs) -> None:
         """Initialize the subclass."""
         super().__init__(*args, **kwargs)
 
@@ -31,17 +34,21 @@ class Bot(Base_Bot):
             except Exception as e:
                 logger.error(f"Cog {extension} failed to load with {type(e)}: {e}")
 
-    async def db_connect(self) -> None:
-        """Estabolish connection with the database."""
-        self.database = Database(config.DATABASE)
-        connected = await self.database.connect()
-        while not connected:
-            logger.warning("Retrying to connect to database in 5s")
-            # Synchronous sleep function to stop everything until db is connecting
-            time.sleep(5)
-            connected = await self.database.connect()
+    async def db_connect(self) -> AsyncSession:
+        """Estabolish connection with the database and return the asynchronous session."""
+        load_tables()  # Load all DB Tables, in order to bring them into the metadata of DbBase
 
-        await self.database.load_tables(self.db_table_list, self)
+        engine = create_async_engine(config.DATABASE_ENGINE_STRING)
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(DbBase.metadata.create_all)  # Create all database tables from found models
+        except ConnectionRefusedError:
+            # Keep recursively trying to connect to the database
+            logger.error("Unable to connect to database, retrying in 5s")
+            time.sleep(5)
+            return await self.db_connect()
+
+        return AsyncSession(bind=engine)
 
     async def on_ready(self) -> None:
         if self.initial_call:
@@ -53,7 +60,7 @@ class Bot(Base_Bot):
         else:
             logger.info("Bot connection reinitialized")
 
-    def run(self, token: str) -> None:
+    def run(self, token: t.Optional[str]) -> None:
         """Override the default `run` method and add a missing token check"""
         if not token:
             logger.error("Missing Bot Token!")
@@ -71,7 +78,7 @@ class Bot(Base_Bot):
         it won't be easy to close the connection.
         """
         self.session = aiohttp.ClientSession()
-        await self.db_connect()
+        self.db_session = await self.db_connect()
         await super().start(*args, **kwargs)
 
     async def close(self) -> None:

@@ -1,6 +1,6 @@
 # Neutron Bot
 
-[![mit](https://img.shields.io/badge/Licensed%20under-MIT-red.svg?style=flat-square)](./LICENSE)
+[![mit](https://img.shields.io/badge/Licensed%20under-GPL-red.svg?style=flat-square)](./LICENSE)
 ![Python package](https://github.com/Codin-Nerds/Neutron-Bot/workflows/Python%20package/badge.svg)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python%203.8-ffe900.svg?longCache=true&style=flat-square&colorB=00a1ff&logo=python&logoColor=88889e)](https://www.python.org/)
 [![Discord](https://img.shields.io/static/v1?label=The%20Codin'%20Nerds&logo=discord&message=%3E300%20members&color=%237289DA&logoColor=white)](https://discord.gg/Dhz9pM7)

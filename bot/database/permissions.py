@@ -2,122 +2,167 @@ import typing as t
 
 from discord import Guild, Member, Role
 from loguru import logger
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.core.bot import Bot
-from bot.database import DBTable, Database
+from bot.database import Base, get_str_guild, get_str_role, upsert
 
 
-class Permissions(DBTable):
-    """
-    This table stores these permissions:
-    * `bantime` maximum amount of time (in seconds) for temp-ban
-    * `mutetime` maximum amount of time (in seconds) for temp-mute
-    * `locktime` maximum amount of time (in seconds) for channel lock
-    For given `role` in given `serverid`
-    """
-    columns = {
-        "serverid": "NUMERIC(40) NOT NULL",
-        "role": "NUMERIC(40) DEFAULT 0",
-        "bantime": "INTEGER DEFAULT 0",
-        "mutetime": "INTEGER DEFAULT 0",
-        "locktime": "INTEGER DEFAULT 0",
-        "UNIQUE": "(serverid, role)"
-    }
+class Permissions(Base):
+    __tablename__ = "permissions"
 
-    def __init__(self, bot: Bot, database: Database):
-        super().__init__(database, "permissions")
-        self.bot = bot
-        self.database = database
+    guild = Column(String, primary_key=True, nullable=False)
+    role = Column(String, primary_key=True, nullable=False)
 
-    async def _set_permission(self, permission_name: str, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Any) -> None:
-        """Set a `role_name` column to store `role` for the specific `guild`."""
-        if isinstance(guild, Guild):
-            guild = guild.id
-        if isinstance(role, Role):
-            role = role.id
+    ban_time = Column(Integer, nullable=True)
+    mute_time = Column(Integer, nullable=True)
+    lock_time = Column(Integer, nullable=True)
 
-        logger.debug(f"Setting {permission_name} on {guild} for <@&{role}> to {value}")
-        await self.db_upsert(
-            columns=["serverid", "role", permission_name],
-            values=[guild, role, value],
-            conflict_columns=["serverid", "role"]
+    @staticmethod
+    def _get_int_time(time: t.Union[int, float]) -> int:
+        """Make sure to return time as int (seconds), or -1 for infinity."""
+        if time == float("inf"):
+            return -1
+        if isinstance(time, float):
+            return round(time)
+        return time
+
+    @staticmethod
+    def _return_time(time: t.Optional[int]) -> t.Optional[t.Union[int, float]]:
+        """Return infinity if number was -1, otherwise, return given number."""
+        if time == -1:
+            return float("inf")
+        return time
+
+    @staticmethod
+    def _get_normalized_time_type(time_type: str) -> str:
+        """Make sure `time_type` is in proper format and is valid."""
+        time_type = time_type if time_type.endswith("_time") else time_type + "_time"
+
+        valid_time_types = ["ban_time", "mute_time", "lock_time"]
+        if time_type not in valid_time_types:
+            raise ValueError(f"`time_type` received invalid type: {time_type}, valid types: {', '.join(valid_time_types)}")
+
+        return time_type
+
+    @classmethod
+    async def set_role_permission(
+        cls,
+        session: AsyncSession,
+        time_type: str,
+        guild: t.Union[str, int, Guild],
+        role: t.Union[str, int, Role],
+        time: t.Union[int, float]
+    ) -> None:
+        """Store given `time` as `time_type` permission for `role` on `guild` into the database."""
+        guild = get_str_guild(guild)
+        role = get_str_role(role)
+        time_type = cls._get_normalized_time_type(time_type)
+        time = cls._get_int_time(time)
+
+        logger.debug(f"Setting {time_type} for {role} on {guild} to {time}")
+
+        await upsert(
+            session, cls,
+            conflict_columns=["role", "guild"],
+            values={"guild": guild, "role": role, time_type: time}
         )
+        await session.commit()
 
-    async def _get_permission(self, permission_name: str, guild: t.Union[Guild, int], role: t.Union[Role, int]) -> t.Any:
-        """Get a `role_name` column for specific `guild` from cache."""
-        if isinstance(guild, Guild):
-            guild = guild.id
-        if isinstance(role, Role):
-            role = role.id
-
-        record = await self.db_get(
-            columns=[permission_name],
-            specification="serverid=$1 AND role=$2",
-            sql_args=[guild, role]
-        )
+    @classmethod
+    async def get_permissions(cls, session: AsyncSession, guild: t.Union[str, int, Guild], role: t.Union[str, int, Role]) -> dict:
+        """Obtain permissions for `role` on `guild` from the database."""
+        guild = get_str_guild(guild)
+        role = get_str_role(role)
 
         try:
-            return record[0]
-        except TypeError:
-            return None
+            row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, role=role).one())
+        except NoResultFound:
+            dct = {col: None for col in cls.__table__.columns.keys()}
+            dct.update({'guild': guild, 'role': role})
+            return dct
+        else:
+            return row.to_dict()
 
-    async def _get_time(self, time_permission: str, guild: t.Union[Guild, int], identifier: t.Union[Member, Role, int]) -> t.Optional[int]:
-        if isinstance(identifier, int):
-            user = self.bot.get_user(identifier)
+    @classmethod
+    async def get_permission(
+        cls,
+        session: AsyncSession,
+        time_type: str,
+        guild: t.Union[str, int, Guild],
+        role: t.Union[str, int, Role]
+    ) -> t.Optional[int]:
+        """Obtain`time_type` permissions for `role` on `guild` from the database."""
+        time_type = cls._get_normalized_time_type(time_type)
+
+        permissions = await cls.get_permissions(session, guild, role)
+        return permissions[time_type]
+
+    @classmethod
+    async def get_permissions_from_member(
+        cls,
+        session: AsyncSession,
+        bot: Bot,
+        guild: t.Union[str, int, Guild],
+        member: t.Union[str, int, Member]
+    ) -> dict:
+        if isinstance(guild, str):
+            guild = int(guild)
+        if isinstance(member, str):
+            member = int(member)
+
+        if isinstance(member, int):
+            user = bot.get_user(member)
             if not user:
-                return await self._get_permission(time_permission, guild, identifier)
-
+                raise ValueError(f"Unable to find valid user by: {member}")
             if isinstance(guild, int):
-                true_guild = self.bot.get_guild(guild)
+                true_guild = bot.get_guild(guild)
                 if not true_guild:
-                    raise RuntimeError(f"Unable to find a guild with id: {guild}")
-                guild = true_guild
+                    raise ValueError(f"Unable to find a guild with id: {guild}")
 
-            identifier = guild.get_member(user.id)
+            member = guild.get_member(user)
 
-        if isinstance(identifier, Member):
-            if identifier.guild_permissions.administrator:
-                return -1
+        if isinstance(member, Member):
+            # Administrators doesn't have limited permissions, makes sure
+            # to handle for that
+            if member.guild_permissions.administrator:
+                dct = {col: float("inf") for col in cls.__table__.columns.keys()}
+                dct.update({'guild': guild})
+                return dct
 
-            # Follow role hierarchy from most important role to everyone
-            # and use the first found time, if non is found, return `None`
-            for role in identifier.roles[::-1]:
-                time = await self._get_permission(time_permission, guild, role)
-                if time is not None and time != 0:
-                    return time
-            else:
-                return None
+            # Follow the hierarchy from most important role to everyone
+            # and use the first found time in each time type,
+            # if none found, return empty permissions
+            dct = {col: None for col in cls.__table__.columns.keys() if col.endswith("_time")}
+            for role in member.roles[::-1]:
+                perms = await cls.get_permissions(session, guild, role)
+                for key, value in dct:
+                    if value is not None:
+                        dct[key] = perms[key]
+            dct.update({'guild': guild})
+            return dct
 
-        if isinstance(identifier, Role):
-            return await self._get_permission(time_permission, guild, identifier)
+    @classmethod
+    async def get_permission_from_member(
+        cls,
+        session: AsyncSession,
+        bot: Bot,
+        time_type: str,
+        guild: t.Union[str, int, Guild],
+        member: t.Union[str, int, Member]
+    ) -> t.Optional[int]:
+        time_type = cls._get_normalized_time_type(time_type)
 
-    async def _set_time(self, time_permission: str, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Union[int, float]) -> None:
-        if value == float("inf"):
-            value = -1
+        permissions = await cls.get_permissions_from_member(session, bot, guild, member)
+        return permissions[time_type]
 
-        if not isinstance(value, int):
-            return RuntimeError(f"value must be an integer, got {type(value)}: {value}")
-
-        await self._set_permission(time_permission, guild, role, value)
-
-    async def set_bantime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Union[int, float]) -> None:
-        await self._set_time("bantime", guild, role, value)
-
-    async def set_mutetime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Union[int, float]) -> None:
-        await self._set_time("mutetime", guild, role, value)
-
-    async def set_locktime(self, guild: t.Union[Guild, int], role: t.Union[Role, int], value: t.Union[int, float]) -> None:
-        await self._set_time("locktime", guild, role, value)
-
-    async def get_bantime(self, guild: t.Union[Guild, int], identifier: t.Union[Member, Role, int]) -> t.Optional[int]:
-        return await self._get_time("bantime", guild, identifier)
-
-    async def get_mutetime(self, guild: t.Union[Guild, int], identifier: t.Union[Member, Role, int]) -> t.Optional[int]:
-        return await self._get_time("mutetime", guild, identifier)
-
-    async def get_locktime(self, guild: t.Union[Guild, int], identifier: t.Union[Member, Role, int]) -> t.Optional[int]:
-        return await self._get_time("locktime", guild, identifier)
-
-
-async def load(bot: Bot, database: Database) -> None:
-    await database.add_table(Permissions(bot, database))
+    def to_dict(self) -> dict:
+        dct = {}
+        for col in self.__table__.columns.keys():
+            val = getattr(self, col)
+            if col.endswith("_time"):
+                val = self._return_time(val)
+            dct[col] = val
+        return dct
