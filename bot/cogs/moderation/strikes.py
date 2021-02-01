@@ -2,6 +2,7 @@ import typing as t
 
 from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.errors import BadArgument
+from sqlalchemy.exc import NoResultFound
 
 from bot.config import STRIKE_TYPES
 from bot.core.bot import Bot
@@ -20,7 +21,6 @@ class Strikes(Cog):
     """
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.strikes_db: StrikesDB = StrikesDB.reference()
 
     @group(invoke_without_command=True, name="strike", aliases=["strikes", "infraction", "infractions"])
     async def strike_group(self, ctx: Context) -> None:
@@ -34,14 +34,23 @@ class Strikes(Cog):
         """
         await ctx.send_help(ctx.command)
 
-    @strike_group.command()
-    async def add(self, ctx: Context, user: ProcessedUser, strike_type: str, *, reason: t.Optional[str] = "No reason specified") -> None:
+    @strike_group.command(aliases=["create"])
+    async def add(self, ctx: Context, user: ProcessedUser, strike_type: str, *, reason: t.Optional[str] = None) -> None:
         """Add a new strike to given `user`"""
         if strike_type not in STRIKE_TYPES:
             raise BadArgument(f"Invalid strike type, possible types are: `{', '.join(STRIKE_TYPES)}`")
 
-        strike_id = await self.strikes_db.add_strike(ctx.guild, ctx.author, user, strike_type, reason)
+        strike_id = await StrikesDB.set_strike(self.bot.db_session, ctx.guild, user, ctx.author, strike_type, reason)
         await ctx.send(f"✅ {strike_type} strike (ID: `{strike_id}`) applied to {user.mention}, reason: `{reason}`")
+
+    @strike_group.command(aliases=["del"])
+    async def remove(self, ctx: Context, strike_id: int) -> None:
+        try:
+            await StrikesDB.remove_strike(self.bot.db_session, ctx.guild, strike_id)
+        except NoResultFound:
+            await ctx.send(f"❌ Strike with ID `{strike_id}` does not exist.")
+        else:
+            await ctx.send(f"✅ Strike with ID `{strike_id}` has been removed.")
 
     async def cog_check(self, ctx: Context) -> bool:
         """
