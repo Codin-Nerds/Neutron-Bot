@@ -4,8 +4,8 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-flake8 = "~=3.8.3"
-flake8-annotations = "~=2.4.0"
+flake8 = "~=3.8"
+flake8-annotations = "~=2.5"
 flake8-bugbear = "~=20.1.4"
 flake8-import-order = "~=0.18.1"
 ipython = "~=7.18.1"
