@@ -72,3 +72,6 @@ jobs:
     - name: Run pre-commit hooks
       run: |
         export PIP_USER=0; SKIP=flake8 pre-commit run --all-files
+
+    - name: Run flake8
+      run: "flake8"
