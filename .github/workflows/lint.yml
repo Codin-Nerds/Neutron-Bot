@@ -71,4 +71,4 @@ jobs:
     # PIP_USER=0 to not do a user install.
     - name: Run pre-commit hooks
       run: |
-        export PIP_USER=0; pre-commit run --all-files
+        export PIP_USER=0; SKIP=flake8 pre-commit run --all-files
