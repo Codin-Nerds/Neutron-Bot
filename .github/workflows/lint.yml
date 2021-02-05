@@ -91,9 +91,12 @@ jobs:
 
     - name: Debug
       run: |
+        pwd
+        ls
+        tree
         echo $GITHUB_PATH
         echo $PATH
         echo ${{ env.PYTHONUSERBASE }}
 
     - name: Run flake8
-      run: "flake8"
+      run: "pipenv run flake8 --extend-exclude '.config'"
