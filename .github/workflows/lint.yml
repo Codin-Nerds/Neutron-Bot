@@ -75,9 +75,9 @@ jobs:
 
     - name: Debug
       run: |
-        echo $(pwd)
-        echo $(ls)
-        echo $(tree)
+        echo $GITHUB_PATH
+        echo $PATH
+        echo ${{ env.PYTHONUSERBASE }}
 
     # - name: Run flake8
     #   run: "flake8"
