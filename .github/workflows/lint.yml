@@ -1,44 +1,31 @@
+name: Lint
+
 on:
   push:
     branches:
       - master
   pull_request:
 
-# env:
-#   # Make sure pip caches dependencies and installs as user
-#   PIP_NO_CACHE_DIR: false
-#   PIP_USER: 1
+env:
+  # Make sure pip caches dependencies and installs as user
+  PIP_NO_CACHE_DIR: false
+  PIP_USER: 1
 
-#   # Make sure pipenv doesn't use fancy graphics
-#   PIPENV_HIDE_EMOJIS: 1
-#   PIPENV_NOSPIN: 1
+  # Make sure pipenv doesn't use fancy graphics
+  PIPENV_HIDE_EMOJIS: 1
+  PIPENV_NOSPIN: 1
 
-#   # Make sure pipenv does not try reuse an environment it's running in
-#   PIPENV_IGNORE_VIRTUALENVS: 1
+  # Make sure pipenv does not try reuse an environment it's running in
+  PIPENV_IGNORE_VIRTUALENVS: 1
 
-#   # Use direct paths to allow caching
-#   PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
-#   PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
+  # Use direct paths to allow caching
+  PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
+  PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
 
 jobs:
-  build:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-    env:
-      # Configure pip to cache dependencies and do a user install
-      PIP_NO_CACHE_DIR: false
-      PIP_USER: 1
-
-      # Hide the graphical elements from pipenv's output
-      PIPENV_HIDE_EMOJIS: 1
-      PIPENV_NOSPIN: 1
-
-      # Make sure pipenv does not try reuse an environment it's running in
-      PIPENV_IGNORE_VIRTUALENVS: 1
-
-      # Specify explicit paths for python dependencies and the pre-commit
-      # environment so we know which directories to cache
-      PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
-      PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
 
     steps:
     - name: Add custom PYTHONUSERBASE to PATH
