@@ -81,6 +81,6 @@ jobs:
       # Error format:
       # ::error file={filename},line={line},col={col}::{message}
       - name: Run lint check with flake8
-        run: "flake8 \
+        run: "pipenv run flake8 \
         --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
         [flake8] %(code)s: %(text)s'"
