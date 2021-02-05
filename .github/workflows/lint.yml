@@ -99,4 +99,4 @@ jobs:
         echo ${{ env.PYTHONUSERBASE }}
 
     - name: Run flake8
-      run: "pipenv run flake8 --extend-exclude '.config'"
+      run: "pipenv run flake8 --extend-exclude '.cache'"
