@@ -54,7 +54,7 @@ jobs:
       if: steps.python_cache.outputs.cache-hit != 'true'
       run: |
         python -m pip install --upgrade pip setuptools wheel pipenv
-        python -m pipenv sync --dev --deploy --system
+        python -m pipenv install --dev --deploy --system
 
     # Cache pre-commit environment
     # the key consists relevant factors to allow
