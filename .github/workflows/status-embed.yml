@@ -3,7 +3,7 @@ name: Status Embed
 on:
   workflow_run:
     workflows:
-      - Python package
+      - Lint
     types:
       - completed
 
