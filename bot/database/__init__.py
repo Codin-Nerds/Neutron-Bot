@@ -2,7 +2,7 @@ import os
 import pathlib
 import typing as t
 
-from discord import Guild, Role, TextChannel
+from discord import Guild, Member, Role, TextChannel, User
 from loguru import logger
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -85,5 +85,14 @@ def get_str_channel(channel: t.Union[str, int, TextChannel]) -> str:
     if isinstance(channel, int):
         channel = str(channel)
     return channel
+
+
+def get_str_user(member: t.Union[str, int, Member, User]) -> str:
+    """Make sure `member` parameter is string."""
+    if isinstance(member, (Member, User)):
+        member = str(member.id)
+    if isinstance(member, int):
+        member = str(member)
+    return member
 
 # endregion
