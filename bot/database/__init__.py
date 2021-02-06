@@ -6,9 +6,6 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 
-from bot.core.autoload import DATABASES, readable_name
-
-
 Base = declarative_base()
 
 
@@ -19,12 +16,15 @@ def load_tables() -> t.List[Base]:
     """
     loaded_modules = []
 
+    # Import here, to avoid circular imports (autoload requires `bot.database`)
+    from bot.core import autoload
+
     # Load found modules
-    for db_module_import_path in DATABASES:
+    for db_module_import_path in autoload.DATABASES:
         try:
             loaded_modules.append(__import__(db_module_import_path))
         except ImportError as e:
-            logger.error(f"Unable to load database: {readable_name(db_module_import_path)} --> {e}")
+            logger.error(f"Unable to load database: {autoload.readable_name(db_module_import_path)} --> {e}")
 
     return loaded_modules
 
