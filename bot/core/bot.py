@@ -77,7 +77,7 @@ class Bot(Base_Bot):
         Setting these on `__init__` directly would mean in case the bot fails to run
         it won't be easy to close the connection.
         """
-        self.session = aiohttp.ClientSession()
+        self.http_session = aiohttp.ClientSession()
         self.db_session = await self.db_connect()
         await super().start(*args, **kwargs)
 
