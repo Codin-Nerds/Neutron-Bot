@@ -18,7 +18,7 @@ def readable_name(name: str) -> str:
     Return uncluttered name by removing first 2 directories
     (without `bot.X.`, which is in every extension/database anyway).
     """
-    readable_name.split(".", maxsplit=2)[-1]
+    return name.split(".", maxsplit=2)[-1]
 
 
 def walk_modules(package: ModuleType, check: t.Optional[FunctionType] = None) -> t.Iterator[str]:
@@ -42,7 +42,7 @@ def extension_check(module: ModuleType) -> bool:
     if module.ispkg:
         imported = importlib.import_module(module.name)
         # If it lacks a setup function, it's not an extension.
-        return not inspect.isfunction(getattr(imported, "setup", None))
+        return inspect.isfunction(getattr(imported, "setup", None))
     return True
 
 
