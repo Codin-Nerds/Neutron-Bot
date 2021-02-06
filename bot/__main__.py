@@ -17,6 +17,7 @@ extensions = [
     "bot.cogs.moderation.slowmode",
     "bot.cogs.setup.roles",
     "bot.cogs.setup.permissions",
+    "bot.cogs.automod.filepaste",
     "bot.cogs.embeds",
 ]
 db_tables = [
