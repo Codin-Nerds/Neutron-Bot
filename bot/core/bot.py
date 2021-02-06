@@ -69,7 +69,7 @@ class Bot(Base_Bot):
 
     async def start(self, *args, **kwargs) -> None:
         """
-        Estabolish a connection to asyncpg database and aiohttp session.
+        Estabolish a session for sqlalchemy database and aiohttp.
 
         Overwriting `start` method is needed in order to only make a connection
         after the bot itself has been initiated.
@@ -85,5 +85,7 @@ class Bot(Base_Bot):
         """Close the bot and do some cleanup."""
         logger.info("Closing bot connection")
         if hasattr(self, "http_session"):
-            await self.session.close()
+            await self.http_session.close()
+        if hasattr(self, "db_session"):
+            await self.db_session.close()
         await super().close()
