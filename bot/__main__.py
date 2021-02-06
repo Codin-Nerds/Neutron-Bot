@@ -9,15 +9,15 @@ TOKEN = os.getenv("BOT_TOKEN")
 PREFIX = config.COMMAND_PREFIX
 
 extensions = [
-    "bot.cogs.error_handler",
-    "bot.cogs.help",
-    "bot.cogs.sudo",
+    "bot.cogs.core.error_handler",
+    "bot.cogs.core.help",
+    "bot.cogs.core.sudo",
     "bot.cogs.moderation.strikes",
     "bot.cogs.moderation.lock",
     "bot.cogs.moderation.slowmode",
     "bot.cogs.setup.roles",
     "bot.cogs.setup.permissions",
-    "bot.cogs.embeds",
+    "bot.cogs.utils.embeds",
 ]
 db_tables = [
     "bot.database.strikes",
