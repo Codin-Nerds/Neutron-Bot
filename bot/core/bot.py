@@ -77,15 +77,13 @@ class Bot(Base_Bot):
         Setting these on `__init__` directly would mean in case the bot fails to run
         it won't be easy to close the connection.
         """
-        self.session = aiohttp.ClientSession()
+        self.http_session = aiohttp.ClientSession()
         self.db_session = await self.db_connect()
         await super().start(*args, **kwargs)
 
     async def close(self) -> None:
         """Close the bot and do some cleanup."""
         logger.info("Closing bot connection")
-        if hasattr(self, "session"):
+        if hasattr(self, "http_session"):
             await self.session.close()
-        if hasattr(self, "database") and hasattr(self.database, "pool"):
-            await self.database.disconnect()
         await super().close()
