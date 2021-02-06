@@ -1,5 +1,3 @@
-import os
-import pathlib
 import typing as t
 
 from discord import Guild, Member, Role, TextChannel, User
@@ -7,6 +5,8 @@ from loguru import logger
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
+
+from bot.core.autoload import DATABASES, readable_name
 
 
 Base = declarative_base()
@@ -19,18 +19,12 @@ def load_tables() -> t.List[Base]:
     """
     loaded_modules = []
 
-    # Auto database modules discovery
-    database_dir = pathlib.Path(os.getcwd(), "bot", "database")
-    db_modules = [f for f in os.listdir(database_dir) if pathlib.Path(database_dir, f).is_file() and f.endswith(".py")]
-
     # Load found modules
-    for db_module in db_modules:
-        db_module = db_module.replace(".py", "")
-        import_path = f"bot.database.{db_module}"
+    for db_module_import_path in DATABASES:
         try:
-            loaded_modules.append(__import__(import_path))
+            loaded_modules.append(__import__(db_module_import_path))
         except ImportError as e:
-            logger.error(f"Unable to load database: {import_path} --> {e}")
+            logger.error(f"Unable to load database: {readable_name(db_module_import_path)} --> {e}")
 
     return loaded_modules
 
