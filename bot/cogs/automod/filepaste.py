@@ -108,30 +108,31 @@ class FilePaste(Cog):
 
         url = await self.upload_attachments(affected_attachments)
 
-        if url is None:
-            description = textwrap.dedent(
-                """
-                We don't allow posting direct file attachments, here are some tips which might help you:
-                • Try shortening your message, discord limit is 2000 characters.
-                • Use a paste service such as: `gist.github.com`, `paste.gg`, `hastebin.com` or any other similar service.
-                • Split your message into multiple parts (not recommended, paste service is usually a better option).
-                """
-            )
-        else:
-            description = textwrap.dedent(
-                f"""
-                We don't allow posting direct file attachments, instead, we automatically uploaded
-                your message to `paste.gg` pasting service with the contents of your message.
-
-                **Link: {url}**
-                """
-            )
-
         embed = Embed(
             title="Your message got zapped by our spam filter.",
-            description=description,
+            description=textwrap.dedent(
+                """
+                We don't allow posting file attachments, here are some tips which might help you:
+                • Try shortening your message, discord limit is 2000 characters.
+                • Use a paste service such as `paste.gg` or similar service.
+                • Split your message into multiple parts (pasting is usually a better option).
+                """
+            ),
             color=Color.red()
         )
+
+        if url is not None:
+            embed.add_field(
+                name="Automatic attachment upload",
+                value=textwrap.dedent(
+                    f"""
+                    We took care of uploading the file for you, since we know it can be tedious.
+                    You can find your file on `paste.gg` paste service under this link:
+                    **--> {url}**
+                    """
+                ),
+                inline=False
+            )
 
         await message.channel.send(f"Hey {message.author.mention}", embed=embed)
         await message.delete()
