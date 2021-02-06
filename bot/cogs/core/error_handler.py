@@ -6,7 +6,7 @@ from discord import Color, Embed
 from discord.ext.commands import Cog, Context, NotOwner, errors
 from loguru import logger
 
-from bot.cogs.embeds import InvalidEmbed
+from bot.cogs.utils.embeds import InvalidEmbed
 from bot.core.bot import Bot
 
 

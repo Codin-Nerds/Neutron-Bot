@@ -8,6 +8,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from bot import config
+from bot.core.autoload import EXTENSIONS, readable_name
 from bot.database import Base as DbBase
 from bot.database import load_tables
 
@@ -15,24 +16,21 @@ from bot.database import load_tables
 class Bot(Base_Bot):
     """Subclassed Neutron bot."""
 
-    def __init__(self, extensions: t.List[str], db_tables: list, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         """Initialize the subclass."""
         super().__init__(*args, **kwargs)
 
         self.start_time = datetime.utcnow()
-
-        self.extension_list = extensions
-        self.db_table_list = db_tables
         self.initial_call = True
 
     async def load_extensions(self) -> None:
         """Load all listed cogs."""
-        for extension in self.extension_list:
+        for extension in EXTENSIONS:
             try:
                 self.load_extension(extension)
-                logger.debug(f"Cog {extension} loaded.")
+                logger.debug(f"Cog {readable_name(extension)} loaded.")
             except Exception as e:
-                logger.error(f"Cog {extension} failed to load with {type(e)}: {e}")
+                logger.error(f"Cog {readable_name(extension)} failed to load with {type(e)}: {e}")
 
     async def db_connect(self) -> AsyncSession:
         """Estabolish connection with the database and return the asynchronous session."""
@@ -69,7 +67,7 @@ class Bot(Base_Bot):
 
     async def start(self, *args, **kwargs) -> None:
         """
-        Estabolish a connection to asyncpg database and aiohttp session.
+        Estabolish a session for sqlalchemy database and aiohttp.
 
         Overwriting `start` method is needed in order to only make a connection
         after the bot itself has been initiated.
@@ -84,8 +82,8 @@ class Bot(Base_Bot):
     async def close(self) -> None:
         """Close the bot and do some cleanup."""
         logger.info("Closing bot connection")
-        if hasattr(self, "session"):
-            await self.session.close()
-        if hasattr(self, "database") and hasattr(self.database, "pool"):
-            await self.database.disconnect()
+        if hasattr(self, "http_session"):
+            await self.http_session.close()
+        if hasattr(self, "db_session"):
+            await self.db_session.close()
         await super().close()
