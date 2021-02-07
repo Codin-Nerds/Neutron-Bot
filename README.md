@@ -23,7 +23,15 @@ If you want to run this bot on your own, you can simply follow this guide:
 6. Go to **OAuth2** and click bot, than add **Administrator** permissions
 7. You can follow the link that will appear to add the bot to your discord server
 
-### Setting up postgresql database
+### Docker
+
+You can run your application contained within a docker container, which is quite easy and very fast, this means you won't have to set up all the needed services for the bot, such as the postgresql database and the bot will run for you automatically. All you need to do is install docker. Run it as a service and use `docker-compose up` within the clonned project. You will need to have `BOT_TOKEN` environment variable set, with your bot token so that the bot can connect to your discord application.
+
+### Bare-bones installation
+
+You can also run the bot without using docker at all, even though using docker is more convenient and easier, sometimes you might want to run directly, because you might not have enough resources to spin up whole containers or you simply don't want to install docker. Even though we recommend docker installation over bare-bones one, it is important to mention it too.
+
+#### Setting up postgresql database
 
 In order to prevent cluttering the README too much,
 here's a link to official documentation regarding installation:
@@ -31,15 +39,21 @@ here's a link to official documentation regarding installation:
 Note that the installation steps will differ depending on your operating system.
 Make sure to only follow the installation steps specific to your operating system.
 
-### Running bot
+After you made a database and a user with some password for it. You can tell the bot about it using environmental variabls:
+
+* `DATABASE_NAME="bot"` This is the name of your database
+* `DATABASE_USER="bot"` This is the username (ideally this shouldn't be postgres directly, but it can be)
+* `DATABASE_PASSWORD="bot"` This is the password associated with that user account
+* `DATABASE_HOST="127.0.0.1"` This defaults to `127.0.0.1` (localhost), but if you are running the database remotely, you'll want to adjust this
+
+#### Starting the bot
 
 1. Clone the repository (or fork it if you want to make changes)
 2. Install **pipenv** `pip install pipenv`
 3. Build the virtual enviroment from Pipfile.lock `pipenv sync`
-4. Create **.env** file with `BOT_TOKEN=[Your bot token]`
+4. Create `.env` file for your environmental variables with:
+   * `BOT_TOKEN=[Your bot token]`, this is tells the bot how to connect to your discord application
+   * `COMMAND_PREFIX=[Your prefix]`, this is optional and will default to `>>`, if you want different prefix, change this
+   * Rest of the postgresql config, as shown in the postgresql section
 5. Configure the settings (More about this in **Settings** section)
 6. Run the bot `pipenv run start`
-
-### Docker
-
-We will include the option to run the bot in a docker container soon, once we do, we'll make sure to include a step-by-step instruction on running it.
