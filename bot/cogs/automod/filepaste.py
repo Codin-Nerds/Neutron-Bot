@@ -106,6 +106,9 @@ class FilePaste(Cog):
             logger.debug(f"User <@{message.author.id}> posted a message on {message.guild.id} with protected attachments ({extension})")
             affected_attachments.append(attachment)
 
+        if len(affected_attachments) == 0:
+            return
+
         url = await self.upload_attachments(affected_attachments)
 
         embed = Embed(
