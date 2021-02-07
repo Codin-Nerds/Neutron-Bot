@@ -3,6 +3,7 @@ import typing as t
 from datetime import datetime
 
 import aiohttp
+from asyncpg.exceptions import InvalidPasswordError
 from discord.ext.commands import AutoShardedBot as Base_Bot
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -45,6 +46,9 @@ class Bot(Base_Bot):
             logger.error("Unable to connect to database, retrying in 5s")
             time.sleep(5)
             return await self.db_connect()
+        except InvalidPasswordError as exc:
+            logger.critical("Invalid database password.")
+            raise exc
 
         return AsyncSession(bind=engine)
 
