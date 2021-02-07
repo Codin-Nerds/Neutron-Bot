@@ -16,9 +16,9 @@ STRIKE_TYPES = [
 # Database
 DATABASE = {
     "host": os.getenv("DATABASE_HOST", "127.0.0.1"),
-    "database": os.getenv("DATABASE_NAME"),
-    "user": os.getenv("DATABASE_USER"),
-    "password": os.getenv("DATABASE_PASSWORD"),
+    "database": os.getenv("DATABASE_NAME", "bot"),
+    "user": os.getenv("DATABASE_USER", "bot"),
+    "password": os.getenv("DATABASE_PASSWORD", "bot"),
 }
 DATABASE_ENGINE_STRING = f"postgresql+asyncpg://{DATABASE['user']}:{DATABASE['password']}@{DATABASE['host']}/{DATABASE['database']}"
 
