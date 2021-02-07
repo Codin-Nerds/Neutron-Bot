@@ -1,0 +1,33 @@
+# This docker compose is used for quick setups of database which
+# the bot project relies on for testing. Use it if you haven't got a
+# ready-to-use site environment already setup.
+
+version: "3.7"
+
+services:
+  postgres:
+    image: postgres:12-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: bot
+      POSTGRES_USER: bot
+      POSTGRES_PASSWORD: bot
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs:/bot/logs
+      - .:/bot:ro
+    tty: true
+    depends_on:
+      - postgres
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      COMMAND_PREFIX: ${COMMAND_PREFIX}
+      DATABASE_HOST: postgres:5432
+      DATABASE_NAME: bot
+      DATABASE_USER: bot
+      DATABASE_PASSWORD: bot

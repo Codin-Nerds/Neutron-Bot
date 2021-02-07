@@ -1,0 +1,49 @@
+# Ignore python cache
+__pycache__/
+
+# virtualenv
+env/
+venv/
+.venv
+
+# Tests cache
+.pytest_cache/
+
+# Vscode settings
+.vscode/
+
+# Ignore enviromental vars in `db.env` and `.env` files (contains private information and database authentication data)
+*.env
+
+# Ignore intellij Files (PyCharm)
+.idea
+
+# Ignore spyder Files
+.spyproject/
+
+# Ignore ds store files
+.DS_STORE
+
+# Ignore coverage reports
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+htmlcov/
+
+
+# Ignore logs
+logs/*
+
+# Backup files
+*.bak
+
+# Ignore docker itself
+docker
+
+# Personal TODO files
+TODO
+
+# Ignore SQL query files (these are usually only used for testing)
+*.sql
+tests_sql/
