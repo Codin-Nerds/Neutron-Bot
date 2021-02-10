@@ -4,12 +4,13 @@ from ast import literal_eval
 from contextlib import suppress
 from datetime import datetime
 
+import aiohttp
 from dateutil.relativedelta import relativedelta
 from discord import Member, User
 from discord.errors import NotFound
 from discord.ext.commands import (
     BadArgument, Context, Converter,
-    MemberConverter, MemberNotFound,
+    IDConverter, MemberConverter, MemberNotFound,
     UserConverter, UserNotFound
 )
 from loguru import logger
@@ -247,3 +248,60 @@ class ProcessedMember(MemberConverter):
             return await ctx.guild.fetch_member(ID)
         except NotFound:
             raise MemberNotFound(f"No member with ID: {ID} found on guild {ctx.guild.id}")
+
+
+class DiscordInvite(Converter):
+    """
+    Try to obtain guild data from a valid discord invite,
+    If no invite was found, or we obtain server id rather than an invite, raise `BadArgument`.
+    Otherwise, return dict (from received JSON) with a response from discord invite API:
+
+    For more info about the return style, check the API docs:
+    https://discord.com/developers/docs/resources/guild#guild-object
+    """
+    invite_pattern = re.compile(
+        r"(?:discord(?:[\.,]|dot)gg|"                     # Could be discord.gg/
+        r"discord(?:[\.,]|dot)com(?:\/|slash)invite|"     # or discord.com/invite/
+        r"discordapp(?:[\.,]|dot)com(?:\/|slash)invite|"  # or discordapp.com/invite/
+        r"discord(?:[\.,]|dot)me|"                        # or discord.me
+        r"discord(?:[\.,]|dot)io"                         # or discord.io.
+        r")(?:[\/]|slash)"                                # / or 'slash'
+        r"([a-zA-Z0-9\-]+)",                              # the invite code itself
+        flags=re.IGNORECASE
+    )
+
+    @classmethod
+    def extract_invite(cls, text: str) -> t.Optional[re.Match]:
+        """
+        Extract invite match from given string.
+
+        This will find invite link in `text`, even if the text
+        itself contains more text
+        """
+        return cls.invite_pattern.search(text)
+
+    @staticmethod
+    async def get_invite_data(http_session: aiohttp.ClientSession, invite_id: str) -> t.Optional[dict]:
+        """
+        Make a call to discord invite API and try to obtain data
+        about given invite, this will be in a JSON (dict) format.
+        If no data was found, return `None`.
+        """
+        discord_invite_api = "https://discordapp.com/api/v7/invites"
+
+        response = await http_session.get(f"{discord_invite_api}/{invite_id}")
+        if response.status != 404:
+            invite_data = await response.json()
+            return invite_data.get("guild")
+
+    async def convert(self, ctx: Context, message_text: str) -> t.Optional[dict]:
+        invite_code = self.extract_invite(message_text)
+
+        if invite_code:
+            return self.get_invite_data(ctx.bot.http_session, invite_code[1])
+
+        id_converter = IDConverter()
+        if id_converter._get_id_match(message_text):
+            raise BadArgument("Guild IDs are not supported, only invites.")
+
+        raise BadArgument("This does not appear to be a valid Discord server invite.")
