@@ -65,7 +65,7 @@ class Bot(Base_Bot):
     def run(self, token: t.Optional[str]) -> None:
         """Override the default `run` method and add a missing token check"""
         if not token:
-            logger.error("Missing Bot Token!")
+            logger.critical("Missing Bot Token!")
         else:
             super().run(token)
 
