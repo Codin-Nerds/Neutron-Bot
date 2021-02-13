@@ -8,7 +8,7 @@ from discord.ext.commands import Cog, ColourConverter, Context, MessageConverter
 from discord.ext.commands.errors import CheckFailure
 
 from bot.core.bot import Bot
-from bot.core.converters import Unicode
+from bot.utils.converters import Unicode
 
 
 class InvalidEmbed(Exception):

@@ -4,8 +4,8 @@ from discord import Embed
 from discord.ext.commands import Cog, Context, RoleConverter, command
 
 from bot.core.bot import Bot
-from bot.core.converters import Duration
 from bot.database.permissions import Permissions
+from bot.utils.converters import Duration
 from bot.utils.time import stringify_duration
 
 

@@ -7,11 +7,11 @@ from discord.ext.commands import Cog, Context, MissingPermissions, command
 from loguru import logger
 
 from bot.core.bot import Bot
-from bot.core.converters import Duration
-from bot.core.timer import Timer
 from bot.database.permissions import Permissions
 from bot.database.roles import Roles
+from bot.utils.converters import Duration
 from bot.utils.time import stringify_duration
+from bot.utils.timer import Timer
 
 
 class Lock(Cog):

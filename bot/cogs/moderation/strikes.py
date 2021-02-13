@@ -6,8 +6,8 @@ from sqlalchemy.exc import NoResultFound
 
 from bot.config import STRIKE_TYPES
 from bot.core.bot import Bot
-from bot.core.converters import ProcessedUser
 from bot.database.strikes import Strikes as StrikesDB
+from bot.utils.converters import ProcessedUser
 
 
 class Strikes(Cog):
