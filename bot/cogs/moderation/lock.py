@@ -3,7 +3,8 @@ import typing as t
 from collections import defaultdict
 
 from discord import TextChannel
-from discord.ext.commands import Cog, Context, MissingPermissions, command
+from discord.ext.commands import Cog, Context, command
+from discord.ext.commands.errors import MissingPermissions
 from loguru import logger
 
 from bot.core.bot import Bot
@@ -168,7 +169,7 @@ class Lock(Cog):
         if ctx.author.permissions_in(ctx.channel).manage_messages:
             return True
 
-        return False
+        return MissingPermissions("Only members with manage messages rights can use this command.")
 
 
 def setup(bot: Bot) -> None:

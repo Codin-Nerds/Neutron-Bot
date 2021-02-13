@@ -1,7 +1,9 @@
 import textwrap
+import typing as t
 
 from discord import Embed
 from discord.ext.commands import Cog, Context, RoleConverter, command
+from discord.ext.commands.errors import MissingPermissions
 
 from bot.core.bot import Bot
 from bot.core.converters import Duration
@@ -10,6 +12,10 @@ from bot.utils.time import stringify_duration
 
 
 class PermissionsSetup(Cog):
+    """
+    This cog is here to provide initial setup of log channels for given guild.
+    After that, there usually isn't a use for it anymore, unless that channel is changed.
+    """
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -68,6 +74,13 @@ class PermissionsSetup(Cog):
         )
 
         await ctx.send(embed=embed)
+
+    async def cog_check(self, ctx: Context) -> t.Optional[bool]:
+        """Only allow users with administrator permission to use these functions."""
+        if ctx.author.guild_permissions.administrator:
+            return True
+
+        raise MissingPermissions("Only members with administrator rights can use this command.")
 
 
 def setup(bot: Bot) -> None:

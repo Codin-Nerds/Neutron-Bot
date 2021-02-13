@@ -1,7 +1,9 @@
 import textwrap
+import typing as t
 
 from discord import Embed, Role
 from discord.ext.commands import Cog, Context, RoleConverter, command
+from discord.ext.commands.errors import MissingPermissions
 
 from bot.core.bot import Bot
 from bot.database.roles import Roles
@@ -56,6 +58,13 @@ class RolesSetup(Cog):
         )
 
         await ctx.send(embed=embed)
+
+    async def cog_check(self, ctx: Context) -> t.Optional[bool]:
+        """Only allow users with administrator permission to use these functions."""
+        if ctx.author.guild_permissions.administrator:
+            return True
+
+        raise MissingPermissions("Only members with administrator rights can use this command.")
 
 
 def setup(bot: Bot) -> None:

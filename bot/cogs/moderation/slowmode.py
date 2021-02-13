@@ -1,4 +1,5 @@
-from discord.ext.commands import BadArgument, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
+from discord.ext.commands.errors import BadArgument, MissingPermissions
 from loguru import logger
 
 from bot.core.bot import Bot
@@ -43,7 +44,7 @@ class Slowmode(Cog):
         if ctx.author.permissions_in(ctx.channel).manage_channels:
             return True
 
-        return False
+        raise MissingPermissions("Only members with manage messages rights can use this command.")
 
 
 def setup(bot: Bot) -> None:

@@ -1,7 +1,7 @@
 import typing as t
 
 from discord.ext.commands import Cog, Context, group
-from discord.ext.commands.errors import BadArgument
+from discord.ext.commands.errors import BadArgument, MissingPermissions
 from sqlalchemy.exc import NoResultFound
 
 from bot.config import STRIKE_TYPES
@@ -61,7 +61,7 @@ class Strikes(Cog):
         if ctx.author.permissions_in(ctx.channel).administrator:
             return True
 
-        return False
+        raise MissingPermissions("Only members with administrator rights can use this command.")
 
 
 def setup(bot: Bot) -> None:
