@@ -20,7 +20,7 @@ class LogChannels(Base):
     member_log = Column(String, nullable=True)
     join_log = Column(String, nullable=True)
 
-    @classmethod
+    @staticmethod
     def _get_normalized_log_type(log_type: str) -> str:
         """Make sure `log_type` is in proper format and is valid."""
         log_type = log_type if log_type.endswith("_log") else log_type + "_log"
