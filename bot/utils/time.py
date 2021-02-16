@@ -133,7 +133,7 @@ def time_elapsed(_from: datetime, to: t.Optional[datetime] = None, min_unit: str
     `1 year 2 months 2 weeks and 5 days ago`
     """
     if not to:
-        to = datetime.datetime.utcnow()
+        to = datetime.utcnow()
 
     rel_delta = relativedelta(to, _from)
     stringified_time = stringify_reldelta(rel_delta, min_unit=min_unit)
