@@ -69,7 +69,7 @@ class LogChannels(Base):
 
     @classmethod
     async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> dict:
-        log_type = cls._get_normalized_time_type(log_type)
+        log_type = cls._get_normalized_log_type(log_type)
 
         log_channels = await cls.get_log_channels(session, guild)
         return log_channels[log_type]
