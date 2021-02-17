@@ -25,9 +25,9 @@ class JoinLog(Cog):
             title="Member joined",
             description=textwrap.dedent(
                 f"""
-                Profile: {member.mention}
-                Created: {time_elapsed(member.created_at, max_units=3)}
-                ID: {member.id}
+                **Mention:** {member.mention}
+                **Created:** {time_elapsed(member.created_at, max_units=3)}
+                **ID:** {member.id}
                 He is {Ordinal.make_ordinal(member.guild.member_count)} to join.
                 """
             ),
