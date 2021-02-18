@@ -29,6 +29,7 @@ class ServerLog(Cog):
                 check_params={
                     "name": "Name",
                     "topic": "Topic",
+                    "is_nsfw": "NSFW",
                     "slowmode_delay": (slowmode_readable, "Slowmode delay"),
                     "category": "Category",
                 }
@@ -41,6 +42,7 @@ class ServerLog(Cog):
                 check_params={
                     "name": "Name",
                     "bitrate": (readable_bitrate, "Bitrate"),
+                    "user_limit": "User limit",
                     "category": "Category",
                 }
             )
@@ -50,6 +52,7 @@ class ServerLog(Cog):
                 title="Category Channel updated",
                 check_params={
                     "name": "Name",
+                    "is_nsfw": "NSFW",
                 }
             )
 
@@ -184,6 +187,9 @@ class ServerLog(Cog):
             return
 
         await server_log_channel.send(embed=embed)
+
+    # TODO: Channel addition/removal
+    # TODO: Add guild-level logs (location change, server rename, ...)
 
 
 def setup(bot: Bot) -> None:
