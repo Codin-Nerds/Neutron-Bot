@@ -9,7 +9,8 @@ TOKEN = os.getenv("BOT_TOKEN")
 PREFIX = config.COMMAND_PREFIX
 
 intents = Intents.default()
-intents.members = True
+intents.guilds = True
+intents.members = True  # Requires discord app permission
 
 bot = Bot(
     command_prefix=PREFIX,
