@@ -49,10 +49,10 @@ class JoinLog(Cog):
             title="Member left",
             description=textwrap.dedent(
                 f"""
-                Profile: {member.mention}
-                Roles: {roles if roles else None}
-                Joined: {time_elapsed(member.joined_at, max_units=3)}
-                ID: {member.id}
+                **Mention:** {member.mention}
+                **Joined:** {time_elapsed(member.joined_at, max_units=3)}
+                **Roles:** {roles if roles else None}
+                **ID:** {member.id}
                 Server is now at {member.guild.member_count} members.
                 """
             ),
