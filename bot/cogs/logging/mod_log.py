@@ -16,8 +16,8 @@ from bot.database.log_channels import LogChannels
 class ModLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.ignored = defaultdict(set)  # usage described in `ignore` function
-        self.kick_last = defaultdict(datetime.datetime.utcnow)  # usage described in `_identify_kick` function
+        self.ignored = defaultdict(set)  # usage described in `ignore`
+        self.audit_last = defaultdict(lambda: defaultdict(lambda: None))  # usage described in `_retreive_audit_action`
 
     async def send_log(self, guild: Guild, *send_args, **send_kwargs) -> bool:
         """
@@ -51,33 +51,66 @@ class ModLog(Cog):
 
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: t.Union[User, Member]) -> None:
-        if (guild.id, user.id) in self.ignored[Event.member_ban]:
+        if (guild.id, user.id) in self.ignored[Event.member_unban]:
             return
+
+        unban_log_entry = await self._retreive_audit_action(guild, AuditLogAction.ban, target=user)
+        if unban_log_entry is None:
+            return
+
+        embed = Embed(
+            title="User banned",
+            description=textwrap.dedent(
+                f"""
+                User: {user.mention}
+                Author: {unban_log_entry.user.mention}
+                Reason: {unban_log_entry.reason}
+                """
+            ),
+            color=Color.dark_orange()
+        )
+        embed.set_thumbnail(url=user.avatar_url)
+        embed.timestamp = unban_log_entry.created_at
+        await self.send_log(guild, embed=embed)
 
     @Cog.listener()
     async def on_member_unban(self, guild: Guild, user: Member) -> None:
         if (guild.id, user.id) in self.ignored[Event.member_unban]:
             return
 
+        ban_log_entry = await self._retreive_audit_action(guild, AuditLogAction.unban, target=user)
+        if ban_log_entry is None:
+            return
+
+        embed = Embed(
+            title="User unbanned",
+            description=textwrap.dedent(
+                f"""
+                User: {user.mention}
+                Author: {ban_log_entry.user.mention}
+                Reason: {ban_log_entry.reason}
+                """
+            ),
+            color=Color.dark_orange(),
+        )
+        embed.set_thumbnail(url=user.avatar_url)
+        embed.timestamp = ban_log_entry.created_at
+        await self.send_log(guild, embed=embed)
+
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
         """
         This is a handler which checks if there is a kick entry in audit log,
         when the member leaves, if there is, this wasn't a normal leave, but
-        rather a moderator kick.
+        rather a kick. In which case, kick log is sent.
         """
-        try:
-            kick_log_entry = await self._identify_kick(member)
-        except Forbidden:
-            embed = Embed(
-                title="Error parsing audit log",
-                description="Parsing audit log for kick actions failed, "
-                            "make sure to give the bot right to read audit log.",
-                color=Color.red()
-            )
-            embed.timestamp = datetime.datetime.utcnow()
-            await self.send_log(member.guild, ember=embed)
+        if (member.guild.id, member.id) in self.ignored[Event.member_kick]:
             return
+
+        kick_log_entry = await self._retreive_audit_action(
+            member.guild, AuditLogAction.kick,
+            target=member, allow_repeating=False
+        )
         if kick_log_entry is None:
             return
 
@@ -90,46 +123,78 @@ class ModLog(Cog):
                 Reason: {kick_log_entry.reason}
                 """
             ),
-            color=Color.dark_blue()
+            color=Color.dark_orange()
         )
+        embed.set_thumbnail(url=member.avatar_url)
         embed.timestamp = kick_log_entry.created_at
         await self.send_log(member.guild, embed=embed)
 
-    async def _identify_kick(self, member: Member) -> t.Optional[AuditLogEntry]:
+    async def _retreive_audit_action(
+        self,
+        guild: Guild,
+        action: AuditLogAction,
+        target: t.Any = None,
+        max_time: int = 5,
+        allow_repeating: bool = True,
+    ) -> t.Optional[AuditLogEntry]:
         """
-        Kicking doesn't have a built listener, which means we have to rely on the
-        member_remove listener, and identify, if given removal was a kick by checking
-        the audit log entries.
+        Many listeners often doesn't contain all the things which we could need
+        to construct a meaningful and descriptive log message. Audit entries
+        can help with this, because they contain useful information, such as
+        responsible moderator for given action, action reason, etc.
 
-        If a kick was found, `AuditLogEntry` of that kick is returned, otherwise, we return `None`
+        This function can be used, to obtain last audit entry for given `action`
+        with given `target` (for example banned user) in given `max_time` (in seconds).
+
+        There are some actions for which we don't want to be able to parse the same entry
+        of the audit log twice, even though it would still be within the `max_time` limit.
+        For that reason, there is `allow_repeating` keyword argument, which will block these.
+
+        If an entry was found, `AuditLogEntry` is returned, otherwise, we return `None`.
+        If bot doesn't have permission to access audit log, error embed is sent to
+        mod_log channel, and `None` is returned
         """
-        audit_logs = await member.guild.audit_logs(limit=1, action=AuditLogAction.kick).flatten()
+        audit_logs = await guild.audit_logs(limit=1, action=action).flatten()
         try:
             last_log = audit_logs[0]
         except IndexError:
-            # No kick entry found in audit log
+            # No such entry found in audit log
             return
-
-        if last_log.target != member:
-            # This kick was pointed at a different member
+        except Forbidden:
+            # Bot can't access audit logs
+            embed = Embed(
+                title="Error parsing audit log",
+                description="Parsing audit log for kick actions failed, "
+                            "make sure to give the bot right to read audit log.",
+                color=Color.red()
+            )
+            embed.timestamp = datetime.datetime.utcnow()
+            await self.send_log(guild, ember=embed)
             return
 
         # Make sure to only go through audit logs within 5 seconds,
         # if this log is older, ignore it
-        time_after = datetime.datetime.utcnow() - datetime.timedelta(seconds=5)
+        time_after = datetime.datetime.utcnow() - datetime.timedelta(seconds=max_time)
         if last_log.created_at < time_after:
             return
 
-        # It is possible that the user will rejoin and leave after kick
-        # within the given time limit (checked for above), we keep a cached
-        # times for each user with the last audit log kick entry time, if
-        # this cached version contains the time of this audit log entry, this
-        # was the case and this isn't a valid kick, just a member leaving
-        if last_log.created_at == self.kick_last[member]:
+        if target is not None and last_log.target != target:
+            # This entry was pointed at a different target
             return
-        # if this wasn't the case, the kick is valid, and we should update the cache
-        # with the new processed kick time
-        self.kick_last[member] = last_log.created_at
+
+        if allow_repeating is False:
+            # Sometimes, we might not want to retreive the same audit log entry twice,
+            # for example this is the case with kicks, if we already found an audit entry
+            # for a valid kick, user rejoined and left on his own, within our `max_time`,
+            # we would mark that leaving as a kick action, because we will scan the same
+            # audit log entry twice, to prevent this, we keep a cache of times audit
+            # log entries were created, and if they match, they're the same entry
+            if last_log.created_at == self.audit_last[action][target]:
+                return
+            # if this wasn't the case, the entry is valid, and we should update the cache
+            # with the new processed entry time
+            self.audit_last[action][target] = last_log.created_at
+
         return last_log
 
     # TODO: Finish ban and unban listeners
