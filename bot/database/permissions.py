@@ -20,6 +20,8 @@ class Permissions(Base):
     mute_time = Column(Integer, nullable=True)
     lock_time = Column(Integer, nullable=True)
 
+    valid_time_types = ["ban_time", "mute_time", "lock_time"]
+
     @staticmethod
     def _get_int_time(time: t.Union[int, float]) -> int:
         """Make sure to return time as int (seconds), or -1 for infinity."""
@@ -36,14 +38,13 @@ class Permissions(Base):
             return float("inf")
         return time
 
-    @staticmethod
-    def _get_normalized_time_type(time_type: str) -> str:
+    @classmethod
+    def _get_normalized_time_type(cls, time_type: str) -> str:
         """Make sure `time_type` is in proper format and is valid."""
         time_type = time_type if time_type.endswith("_time") else time_type + "_time"
 
-        valid_time_types = ["ban_time", "mute_time", "lock_time"]
-        if time_type not in valid_time_types:
-            raise ValueError(f"`time_type` received invalid type: {time_type}, valid types: {', '.join(valid_time_types)}")
+        if time_type not in cls.valid_time_types:
+            raise ValueError(f"`time_type` received invalid type: {time_type}, valid types: {', '.join(cls.valid_time_types)}")
 
         return time_type
 

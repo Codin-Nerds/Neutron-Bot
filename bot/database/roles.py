@@ -18,14 +18,15 @@ class Roles(Base):
     muted_role = Column(String, nullable=True)
     staff_role = Column(String, nullable=True)
 
-    @staticmethod
-    def _get_normalized_role_type(role_type: str) -> str:
+    valid_role_types = ["default_role", "muted_role", "staff_role"]
+
+    @classmethod
+    def _get_normalized_role_type(cls, role_type: str) -> str:
         """Make sure `role_type` is in proper format and is valid."""
         role_type = role_type if role_type.endswith("_role") else role_type + "_role"
 
-        valid_role_types = ["default_role", "muted_role", "staff_role"]
-        if role_type not in valid_role_types:
-            raise ValueError(f"`role_type` received invalid type: {role_type}, valid types: {', '.join(valid_role_types)}")
+        if role_type not in cls.valid_role_types:
+            raise ValueError(f"`role_type` received invalid type: {role_type}, valid types: {', '.join(cls.valid_role_types)}")
 
         return role_type
 

@@ -1,8 +1,7 @@
-import textwrap
 import typing as t
 
-from discord import Embed, Role
-from discord.ext.commands import Cog, Context, RoleConverter, command
+from discord import Color, Embed
+from discord.ext.commands import Cog, Context, RoleConverter, group
 from discord.ext.commands.errors import MissingPermissions
 
 from bot.core.bot import Bot
@@ -13,48 +12,35 @@ class RolesSetup(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command(aliases=["defaultrole"])
-    async def default_role(self, ctx: Context, role: RoleConverter) -> None:
-        """Setup default role."""
-        await Roles.set_role(self.bot.db_session, "default", ctx.guild, role)
-        await ctx.send(":white_check_mark: Role updated.")
+    @group(invoke_without_command=True, name="roles", aliases=["role"])
+    async def roles_group(self, ctx: Context, role_type: str, role: RoleConverter) -> None:
+        """Commands for configuring the server roles."""
+        try:
+            await Roles.set_role(self.bot.db_session, role_type, ctx.guild, role)
+        except ValueError:
+            await ctx.send(f":x: Invalid role type, types: `{', '.join(Roles.valid_role_types)}`")
+            return
+        await ctx.send(":white_check_mark: Permissions updated.")
 
-    @command(aliases=["staffrole"])
-    async def staff_role(self, ctx: Context, role: RoleConverter) -> None:
-        """Setup the staff role."""
-        await Roles.set_role(self.bot.db_session, "staff", ctx.guild, role)
-        await ctx.send(":white_check_mark: Role updated.")
+    @roles_group.command(aliases=["info", "status"])
+    async def show(self, ctx: Context) -> None:
+        """Show configured log channels."""
+        obtained_roles = await Roles.get_roles(self.bot.db_session, ctx.guild)
 
-    @command(aliases=["mutedrole"])
-    async def muted_role(self, ctx: Context, role: RoleConverter) -> None:
-        """Setup the muted role."""
-        await Roles.set_role(self.bot.db_session, "muted", ctx.guild, role)
-        await ctx.send(":white_check_mark: Role updated.")
+        description_lines = []
+        for role_type in Roles.valid_role_types:
 
-    @command(aliases=["showroles"])
-    async def show_roles(self, ctx: Context) -> None:
-        """Show configured roles in the server."""
-        roles = await Roles.get_roles(self.bot.db_session, ctx.guild)
-        default = ctx.guild.get_role(roles["default_role"])
-        staff = ctx.guild.get_role(roles["staff_role"])
-        muted = ctx.guild.get_role(roles["muted_role"])
+            role_id = obtained_roles.get(role_type, None)
+            role = await ctx.guild.get_role(role_id)
+            readable_role = role.mention if role is not None else '<not configured>'
 
-        if isinstance(default, Role):
-            default = default.mention
-        if isinstance(staff, Role):
-            staff = staff.mention
-        if isinstance(muted, Role):
-            muted = muted.mention
+            readable_role_type = role_type.replace("_role", "").capitalize()
+            description_lines.append(f"{readable_role_type} role: {readable_role}")
 
         embed = Embed(
-            title="Configured role settings",
-            description=textwrap.dedent(
-                f"""
-                Default role: {default}
-                Staff role: {staff}
-                Muted role: {muted}
-                """
-            )
+            title=f"Permissions for {role} role",
+            description="\n".join(description_lines),
+            color=Color.blue()
         )
 
         await ctx.send(embed=embed)

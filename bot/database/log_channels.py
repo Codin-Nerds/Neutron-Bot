@@ -20,14 +20,15 @@ class LogChannels(Base):
     member_log = Column(String, nullable=True)
     join_log = Column(String, nullable=True)
 
-    @staticmethod
-    def _get_normalized_log_type(log_type: str) -> str:
+    valid_log_types = ["server_log", "mod_log", "message_log", "member_log", "join_log"]
+
+    @classmethod
+    def _get_normalized_log_type(cls, log_type: str) -> str:
         """Make sure `log_type` is in proper format and is valid."""
         log_type = log_type if log_type.endswith("_log") else log_type + "_log"
 
-        valid_log_types = ["server_log", "mod_log", "message_log", "member_log", "join_log"]
-        if log_type not in valid_log_types:
-            raise ValueError(f"`log_type` received invalid type: {log_type}, valid types: {', '.join(valid_log_types)}")
+        if log_type not in cls.valid_log_types:
+            raise ValueError(f"`log_type` received invalid type: {log_type}, valid types: {', '.join(cls.valid_log_types)}")
 
         return log_type
 
