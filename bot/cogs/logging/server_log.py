@@ -29,7 +29,7 @@ class ServerLog(Cog):
                 check_params={
                     "name": "Name",
                     "topic": "Topic",
-                    "is_nsfw": "NSFW",
+                    "is_nsfw": (lambda is_nsfw_func: is_nsfw_func(), "NSFW"),
                     "slowmode_delay": (slowmode_readable, "Slowmode delay"),
                     "category": "Category",
                 }
@@ -90,16 +90,16 @@ class ServerLog(Cog):
         for parameter_name, value in check_params.items():
             before_param = getattr(channel_before, parameter_name)
             after_param = getattr(channel_after, parameter_name)
+            if isinstance(value, tuple):
+                func = value[0]
+                before_param = func(before_param)
+                after_param = func(after_param)
+                # Continue with 2nd element (should be parameter name string)
+                value = value[1]
+
             if before_param != after_param:
-                if isinstance(value, tuple):
-                    func = value[0]
-                    before_param = func(before_param)
-                    after_param = func(after_param)
-                    # Continue with 2nd element (should be parameter name string)
-                    value = value[1]
-                if isinstance(value, str):
-                    field_before_text.append(f"**{value}:** {before_param}")
-                    field_after_text.append(f"**{value}:** {after_param}")
+                field_before_text.append(f"**{value}:** {before_param}")
+                field_after_text.append(f"**{value}:** {after_param}")
 
         if len(field_after_text) == 0:
             return
@@ -176,6 +176,16 @@ class ServerLog(Cog):
         return permissions_embed
 
     @Cog.listener()
+    async def on_guild_channel_delete(self, channel: GuildChannel) -> None:
+        # TODO: Finish this
+        pass
+
+    @Cog.listener()
+    async def on_guild_channel_create(self, channel: GuildChannel) -> None:
+        # TODO: Finish this
+        pass
+
+    @Cog.listener()
     async def on_guild_channel_update(self, channel_before: GuildChannel, channel_after: GuildChannel) -> None:
         embed = self.make_channel_update_embed(channel_before, channel_after)
         if embed is None:
@@ -188,7 +198,6 @@ class ServerLog(Cog):
 
         await server_log_channel.send(embed=embed)
 
-    # TODO: Channel addition/removal
     # TODO: Add guild-level logs (location change, server rename, ...)
 
 
