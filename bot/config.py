@@ -1,4 +1,6 @@
 import os
+from enum import Enum
+
 
 # Developer Mode Settings:
 DEV_MODE = True
@@ -24,3 +26,18 @@ DATABASE_ENGINE_STRING = f"postgresql+asyncpg://{DATABASE['user']}:{DATABASE['pa
 
 # Prefix Settings
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ">>")
+
+
+class Event(Enum):
+    """
+    Used to identify specific event for bot.cogs.logging.mod_log.
+    This isn't in sync with all discord.py real events, it is here
+    to hold a unique identifier for each event
+    """
+    member_kick = "member_kick"
+    member_ban = "member_ban"
+    member_unban = "member_unban"
+
+    member_join = "member_join"
+    member_remove = "member_remove"
+    member_update = "member_update"
