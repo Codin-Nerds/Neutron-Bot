@@ -152,6 +152,8 @@ class ModLog(Cog):
         removed_roles = old_roles - new_roles
         added_roles = new_roles - old_roles
 
+        # TODO: This causes issues because it tries to get something from db, which is already occupied by member_log
+        return  # This can't be enabled until https://github.com/sqlalchemy/sqlalchemy/issues/5967 is resolved
         muted_role_id = await Roles.get_role(self.bot.db_session, "muted", member_after.guild)
         muted_role = member_after.guild.get_role(muted_role_id)
         if muted_role is None:
@@ -247,7 +249,6 @@ class ModLog(Cog):
 
         return last_log
 
-    # TODO: Check for member role updates for muted role
     # TODO: Consider moving `ignore` function to `bot` class, for other cogs
 
 
