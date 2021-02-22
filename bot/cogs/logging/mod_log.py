@@ -157,7 +157,7 @@ class ModLog(Cog):
         if muted_role is None:
             return
 
-        if muted_role not in added_roles + removed_roles:
+        if muted_role not in added_roles.union(removed_roles):
             # Don't proceed if muted role wasn't added or removed
             return
 
