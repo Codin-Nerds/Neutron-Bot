@@ -11,6 +11,7 @@ from discord.ext.commands import Cog
 from bot.config import Event
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
+from bot.database.roles import Roles
 
 
 class ModLog(Cog):
@@ -129,6 +130,55 @@ class ModLog(Cog):
         embed.timestamp = kick_log_entry.created_at
         await self.send_log(member.guild, embed=embed)
 
+    @Cog.listener()
+    async def on_member_update(self, member_before: Member, member_after: Member) -> None:
+        """
+        This is a handler which checks if muted role was added to given member,
+        if it was, a log message is sent, describing this mute action.
+        """
+        if (member_after.guild.id, member_after.id) in self.ignored[Event.member_mute]:
+            return
+
+        if member_before.roles == member_after.roles:
+            # Only continue if there was a role update. This listener does capture
+            # more things, but we aren't interested in them here.
+            return
+
+        old_roles = set(member_before.roles)
+        new_roles = set(member_after.roles)
+
+        # These will always only contain 1 role, but we have
+        # to use sets to meaningfully get it, which returns another set
+        removed_roles = old_roles - new_roles
+        added_roles = new_roles - old_roles
+
+        muted_role_id = await Roles.get_role(self.bot.db_session, "muted", member_after.guild)
+        muted_role = member_after.guild.get_role(muted_role_id)
+        if muted_role is None:
+            return
+
+        if muted_role not in added_roles + removed_roles:
+            # Don't proceed if muted role wasn't added or removed
+            return
+
+        # TODO: Add mute strike
+
+        description = f"User: {member_after.mention}"
+
+        audit_entry = await self._retreive_audit_action(member_after.guild, AuditLogAction.member_role_update, target=member_before)
+        if audit_entry is not None:
+            description += f"\nAuthor: {audit_entry.user.mention}\nReason: {audit_entry.reason}"
+
+        embed = Embed(
+            title=f"User {'unmuted' if muted_role in removed_roles else 'muted'}",
+            description=description,
+            color=Color.dark_orange()
+        )
+        embed.set_thumbnail(url=member_after.avatar_url)
+        embed.timestamp = audit_entry.created_at if audit_entry is not None else datetime.datetime.now()
+
+        await self.send_log(member_after.guild, embed=embed)
+
     async def _retreive_audit_action(
         self,
         guild: Guild,
@@ -197,7 +247,6 @@ class ModLog(Cog):
 
         return last_log
 
-    # TODO: Finish ban and unban listeners
     # TODO: Check for member role updates for muted role
     # TODO: Consider moving `ignore` function to `bot` class, for other cogs
 
