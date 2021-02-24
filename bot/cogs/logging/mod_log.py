@@ -28,7 +28,7 @@ class ModLog(Cog):
         If the message was sent, return True, otherwise return False
         (might happen if mod_log channel isn't defined in database).
         """
-        mod_log_id = await LogChannels.get_log_channel(self.bot.db_session, "server_log", guild)
+        mod_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "server_log", guild)
         mod_log_channel = guild.get_channel(mod_log_id)
         if mod_log_channel is None:
             return False
@@ -152,9 +152,7 @@ class ModLog(Cog):
         removed_roles = old_roles - new_roles
         added_roles = new_roles - old_roles
 
-        # TODO: This causes issues because it tries to get something from db, which is already occupied by member_log
-        return  # This can't be enabled until https://github.com/sqlalchemy/sqlalchemy/issues/5967 is resolved
-        muted_role_id = await Roles.get_role(self.bot.db_session, "muted", member_after.guild)
+        muted_role_id = await Roles.get_role(self.bot.db_engine, "muted", member_after.guild)
         muted_role = member_after.guild.get_role(muted_role_id)
         if muted_role is None:
             return

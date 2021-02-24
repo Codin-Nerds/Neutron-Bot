@@ -16,7 +16,7 @@ class LogChannelsSetup(Cog):
     async def logging_group(self, ctx: Context, log_type: str, channel: TextChannelConverter) -> None:
         """Commands for configuring the log channels."""
         try:
-            await LogChannels.set_log_channel(self.bot.db_session, log_type, ctx.guild, channel)
+            await LogChannels.set_log_channel(self.bot.db_engine, log_type, ctx.guild, channel)
         except ValueError:
             await ctx.send(f":x: Invalid logging type, types: `{', '.join(LogChannels.valid_log_types)}`")
             return
@@ -25,7 +25,7 @@ class LogChannelsSetup(Cog):
     @logging_group.command(aliases=["info", "status"])
     async def show(self, ctx: Context) -> None:
         """Show configured log channels."""
-        obtained_channels = await LogChannels.get_log_channels(self.bot.db_session, ctx.guild)
+        obtained_channels = await LogChannels.get_log_channels(self.bot.db_engine, ctx.guild)
 
         description_lines = []
         for log_type in LogChannels.valid_log_types:

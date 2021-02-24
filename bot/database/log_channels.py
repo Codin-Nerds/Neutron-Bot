@@ -4,7 +4,7 @@ from discord import Guild, TextChannel
 from loguru import logger
 from sqlalchemy import Column, String
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from bot.database import Base, get_str_channel, get_str_guild, upsert
 
@@ -35,12 +35,14 @@ class LogChannels(Base):
     @classmethod
     async def set_log_channel(
         cls,
-        session: AsyncSession,
+        engine: AsyncEngine,
         log_type: str,
         guild: t.Union[str, int, Guild],
         channel: t.Union[str, int, TextChannel]
     ) -> None:
         """Store given `channel` as `log_type` log channel for `guild` into the database."""
+        session = AsyncSession(engine)
+
         guild = get_str_guild(guild)
         channel = get_str_channel(channel)
         log_type = cls._get_normalized_log_type(log_type)
@@ -55,8 +57,10 @@ class LogChannels(Base):
         await session.commit()
 
     @classmethod
-    async def get_log_channels(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> dict:
+    async def get_log_channels(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild]) -> dict:
         """Obtain defined log channels for given `guild` from the database."""
+        session = AsyncSession(engine)
+
         guild = get_str_guild(guild)
 
         try:
@@ -69,10 +73,10 @@ class LogChannels(Base):
             return row.to_dict()
 
     @classmethod
-    async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> dict:
+    async def get_log_channel(cls, engine: AsyncEngine, log_type: str, guild: t.Union[str, int, Guild]) -> dict:
         log_type = cls._get_normalized_log_type(log_type)
 
-        log_channels = await cls.get_log_channels(session, guild)
+        log_channels = await cls.get_log_channels(engine, guild)
         return log_channels[log_type]
 
     def to_dict(self) -> dict:

@@ -16,7 +16,7 @@ class JoinLog(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
-        join_log_id = await LogChannels.get_log_channel(self.bot.db_session, "join_log", member.guild)
+        join_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "join_log", member.guild)
         join_log_channel = member.guild.get_channel(join_log_id)
         if join_log_channel is None:
             return
@@ -39,7 +39,7 @@ class JoinLog(Cog):
 
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
-        join_log_id = await LogChannels.get_log_channel(self.bot.db_session, "join_log", member.guild)
+        join_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "join_log", member.guild)
         join_log_channel = member.guild.get_channel(join_log_id)
         if join_log_channel is None:
             return

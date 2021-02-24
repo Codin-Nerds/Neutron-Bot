@@ -191,7 +191,7 @@ class ServerLog(Cog):
         if embed is None:
             return
 
-        server_log_id = await LogChannels.get_log_channel(self.bot.db_session, "server_log", channel_after.guild)
+        server_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "server_log", channel_after.guild)
         server_log_channel = channel_after.guild.get_channel(server_log_id)
         if server_log_channel is None:
             return

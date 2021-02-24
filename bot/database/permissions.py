@@ -4,7 +4,7 @@ from discord import Guild, Member, Role
 from loguru import logger
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from bot.core.bot import Bot
 from bot.database import Base, get_str_guild, get_str_role, upsert
@@ -51,13 +51,15 @@ class Permissions(Base):
     @classmethod
     async def set_role_permission(
         cls,
-        session: AsyncSession,
+        engine: AsyncEngine,
         time_type: str,
         guild: t.Union[str, int, Guild],
         role: t.Union[str, int, Role],
         time: t.Union[int, float]
     ) -> None:
         """Store given `time` as `time_type` permission for `role` on `guild` into the database."""
+        session = AsyncSession(bind=engine)
+
         guild = get_str_guild(guild)
         role = get_str_role(role)
         time_type = cls._get_normalized_time_type(time_type)
@@ -73,8 +75,10 @@ class Permissions(Base):
         await session.commit()
 
     @classmethod
-    async def get_permissions(cls, session: AsyncSession, guild: t.Union[str, int, Guild], role: t.Union[str, int, Role]) -> dict:
+    async def get_permissions(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild], role: t.Union[str, int, Role]) -> dict:
         """Obtain permissions for `role` on `guild` from the database."""
+        session = AsyncSession(bind=engine)
+
         guild = get_str_guild(guild)
         role = get_str_role(role)
 
@@ -90,7 +94,7 @@ class Permissions(Base):
     @classmethod
     async def get_permission(
         cls,
-        session: AsyncSession,
+        engine: AsyncEngine,
         time_type: str,
         guild: t.Union[str, int, Guild],
         role: t.Union[str, int, Role]
@@ -98,13 +102,13 @@ class Permissions(Base):
         """Obtain`time_type` permissions for `role` on `guild` from the database."""
         time_type = cls._get_normalized_time_type(time_type)
 
-        permissions = await cls.get_permissions(session, guild, role)
+        permissions = await cls.get_permissions(engine, guild, role)
         return permissions[time_type]
 
     @classmethod
     async def get_permissions_from_member(
         cls,
-        session: AsyncSession,
+        engine: AsyncEngine,
         bot: Bot,
         guild: t.Union[str, int, Guild],
         member: t.Union[str, int, Member]
@@ -138,7 +142,7 @@ class Permissions(Base):
             # if none found, return empty permissions
             dct = {col: None for col in cls.__table__.columns.keys() if col.endswith("_time")}
             for role in member.roles[::-1]:
-                perms = await cls.get_permissions(session, guild, role)
+                perms = await cls.get_permissions(engine, guild, role)
                 for key, value in dct:
                     if value is not None:
                         dct[key] = perms[key]
@@ -148,7 +152,7 @@ class Permissions(Base):
     @classmethod
     async def get_permission_from_member(
         cls,
-        session: AsyncSession,
+        engine: AsyncEngine,
         bot: Bot,
         time_type: str,
         guild: t.Union[str, int, Guild],
@@ -156,7 +160,7 @@ class Permissions(Base):
     ) -> t.Optional[int]:
         time_type = cls._get_normalized_time_type(time_type)
 
-        permissions = await cls.get_permissions_from_member(session, bot, guild, member)
+        permissions = await cls.get_permissions_from_member(engine, bot, guild, member)
         return permissions[time_type]
 
     def to_dict(self) -> dict:

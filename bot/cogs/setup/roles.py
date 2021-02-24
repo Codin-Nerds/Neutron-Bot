@@ -16,7 +16,7 @@ class RolesSetup(Cog):
     async def roles_group(self, ctx: Context, role_type: str, role: RoleConverter) -> None:
         """Commands for configuring the server roles."""
         try:
-            await Roles.set_role(self.bot.db_session, role_type, ctx.guild, role)
+            await Roles.set_role(self.bot.db_engine, role_type, ctx.guild, role)
         except ValueError:
             await ctx.send(f":x: Invalid role type, types: `{', '.join(Roles.valid_role_types)}`")
             return
@@ -25,13 +25,13 @@ class RolesSetup(Cog):
     @roles_group.command(aliases=["info", "status"])
     async def show(self, ctx: Context) -> None:
         """Show configured log channels."""
-        obtained_roles = await Roles.get_roles(self.bot.db_session, ctx.guild)
+        obtained_roles = await Roles.get_roles(self.bot.db_engine, ctx.guild)
 
         description_lines = []
         for role_type in Roles.valid_role_types:
 
             role_id = obtained_roles.get(role_type, None)
-            role = await ctx.guild.get_role(role_id)
+            role = ctx.guild.get_role(role_id)
             readable_role = role.mention if role is not None else '<not configured>'
 
             readable_role_type = role_type.replace("_role", "").capitalize()

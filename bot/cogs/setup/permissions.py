@@ -22,7 +22,7 @@ class PermissionsSetup(Cog):
     async def permissions_group(self, ctx: Context, permission_type: str, role: RoleConverter, duration: Duration) -> None:
         """Commands for configuring the role permissions."""
         try:
-            await Permissions.set_role_permission(self.bot.db_session, permission_type, ctx.guild, role, duration)
+            await Permissions.set_role_permission(self.bot.db_engine, permission_type, ctx.guild, role, duration)
         except ValueError:
             await ctx.send(f":x: Invalid logging type, types: `{', '.join(Permissions.valid_time_types)}`")
             return
@@ -31,7 +31,7 @@ class PermissionsSetup(Cog):
     @permissions_group.command(aliases=["info", "status"])
     async def show(self, ctx: Context, role: RoleConverter) -> None:
         """Show configured log channels."""
-        obtained_times = await Permissions.get_permissions(self.bot.db_session, ctx.guild, role)
+        obtained_times = await Permissions.get_permissions(self.bot.db_engine, ctx.guild, role)
 
         description_lines = []
         for time_type in Permissions.valid_time_types:

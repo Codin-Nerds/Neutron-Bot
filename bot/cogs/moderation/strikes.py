@@ -40,13 +40,13 @@ class Strikes(Cog):
         if strike_type not in STRIKE_TYPES:
             raise BadArgument(f"Invalid strike type, possible types are: `{', '.join(STRIKE_TYPES)}`")
 
-        strike_id = await StrikesDB.set_strike(self.bot.db_session, ctx.guild, user, ctx.author, strike_type, reason)
+        strike_id = await StrikesDB.set_strike(self.bot.db_engine, ctx.guild, user, ctx.author, strike_type, reason)
         await ctx.send(f"✅ {strike_type} strike (ID: `{strike_id}`) applied to {user.mention}, reason: `{reason}`")
 
     @strike_group.command(aliases=["del"])
     async def remove(self, ctx: Context, strike_id: int) -> None:
         try:
-            await StrikesDB.remove_strike(self.bot.db_session, ctx.guild, strike_id)
+            await StrikesDB.remove_strike(self.bot.db_engine, ctx.guild, strike_id)
         except NoResultFound:
             await ctx.send(f"❌ Strike with ID `{strike_id}` does not exist.")
         else:

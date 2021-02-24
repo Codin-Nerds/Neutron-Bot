@@ -6,7 +6,7 @@ import aiohttp
 from asyncpg.exceptions import InvalidPasswordError
 from discord.ext.commands import AutoShardedBot as Base_Bot
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from bot import config
 from bot.core.autoload import EXTENSIONS, readable_name
@@ -33,8 +33,18 @@ class Bot(Base_Bot):
             except Exception as e:
                 logger.error(f"Cog {readable_name(extension)} failed to load with {type(e)}: {e}")
 
-    async def db_connect(self) -> AsyncSession:
-        """Estabolish connection with the database and return the asynchronous session."""
+    async def db_connect(self) -> AsyncEngine:
+        """
+        Estabolish connection with the database and return the asynchronous engine.
+
+        Function which interract with database will then be able to use this engine to
+        create their `AsyncSession` instances, which will then be used to perform any
+        operations on the database.
+
+        We retrun `AsyncEngine` instead of directly using `AsyncSession`, because reusing
+        the same session isn't thread-safe and when multiple calls happen concurrently,
+        it causes issues that asyncpg can't handle.
+        """
         load_tables()  # Load all DB Tables, in order to bring them into the metadata of DbBase
 
         engine = create_async_engine(config.DATABASE_ENGINE_STRING)
@@ -50,7 +60,7 @@ class Bot(Base_Bot):
             logger.critical("Invalid database password.")
             raise exc
 
-        return AsyncSession(bind=engine)
+        return engine
 
     async def on_ready(self) -> None:
         if self.initial_call:
@@ -80,7 +90,7 @@ class Bot(Base_Bot):
         it won't be easy to close the connection.
         """
         self.http_session = aiohttp.ClientSession()
-        self.db_session = await self.db_connect()
+        self.db_engine = await self.db_connect()
         await super().start(*args, **kwargs)
 
     async def close(self) -> None:

@@ -81,7 +81,7 @@ class MemberLog(Cog):
         embed.set_thumbnail(url=member_after.avatar_url)
         embed.timestamp = datetime.datetime.utcnow()
 
-        member_log_id = await LogChannels.get_log_channel(self.bot.db_session, "member_log", member_after.guild)
+        member_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "member_log", member_after.guild)
         member_log_channel = member_after.guild.get_channel(member_log_id)
         if member_log_channel is None:
             return
@@ -137,7 +137,7 @@ class MemberLog(Cog):
             if guild.get_member(user_after.id) is None:
                 continue
 
-            member_log_id = await LogChannels.get_log_channel(self.bot.db_session, "member_log", guild)
+            member_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "member_log", guild)
             member_log_channel = guild.get_channel(member_log_id)
             if member_log_channel is not None:
                 member_log_channels.append(member_log_channel)
