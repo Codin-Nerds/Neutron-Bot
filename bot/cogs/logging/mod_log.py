@@ -139,9 +139,9 @@ class ModLog(Cog):
         if (member_after.guild.id, member_after.id) in self.ignored[Event.member_mute]:
             return
 
+        # Only continue if there was a role update. This listener does capture
+        # more things, but we aren't interested in them here.
         if member_before.roles == member_after.roles:
-            # Only continue if there was a role update. This listener does capture
-            # more things, but we aren't interested in them here.
             return
 
         old_roles = set(member_before.roles)
@@ -157,8 +157,8 @@ class ModLog(Cog):
         if muted_role is None:
             return
 
+        # Don't proceed if muted role wasn't added or removed
         if muted_role not in added_roles.union(removed_roles):
-            # Don't proceed if muted role wasn't added or removed
             return
 
         # TODO: Add mute strike
