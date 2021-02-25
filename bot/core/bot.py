@@ -98,6 +98,4 @@ class Bot(Base_Bot):
         logger.info("Closing bot connection")
         if hasattr(self, "http_session"):
             await self.http_session.close()
-        if hasattr(self, "db_session"):
-            await self.db_session.close()
         await super().close()

@@ -53,6 +53,7 @@ class Roles(Base):
             values={"guild": guild, role_type: role}
         )
         await session.commit()
+        await session.close()
 
     @classmethod
     async def get_roles(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild]) -> dict:
@@ -68,6 +69,8 @@ class Roles(Base):
             return dct
         else:
             return row.to_dict()
+        finally:
+            await session.close()
 
     @classmethod
     async def get_role(cls, engine: AsyncEngine, role_type: str, guild: t.Union[str, int, Guild]) -> str:

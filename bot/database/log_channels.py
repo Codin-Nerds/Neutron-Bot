@@ -19,8 +19,9 @@ class LogChannels(Base):
     message_log = Column(String, nullable=True)
     member_log = Column(String, nullable=True)
     join_log = Column(String, nullable=True)
+    voice_log = Column(String, nullable=True)
 
-    valid_log_types = ["server_log", "mod_log", "message_log", "member_log", "join_log"]
+    valid_log_types = ["server_log", "mod_log", "message_log", "member_log", "join_log", "voice_log"]
 
     @classmethod
     def _get_normalized_log_type(cls, log_type: str) -> str:
@@ -55,6 +56,7 @@ class LogChannels(Base):
             values={"guild": guild, log_type: channel}
         )
         await session.commit()
+        await session.close()
 
     @classmethod
     async def get_log_channels(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild]) -> dict:
@@ -71,6 +73,8 @@ class LogChannels(Base):
             return dct
         else:
             return row.to_dict()
+        finally:
+            await session.close()
 
     @classmethod
     async def get_log_channel(cls, engine: AsyncEngine, log_type: str, guild: t.Union[str, int, Guild]) -> dict:

@@ -26,6 +26,7 @@ class StrikeIndex(Base):
         next_id = row.next_id + 1
         row.next_id = next_id
         await session.commit()
+        await session.close()
         return next_id
 
 
@@ -78,6 +79,7 @@ class Strikes(Base):
             }
         )
         await session.commit()
+        await session.close()
         return strike_id
 
     @classmethod
@@ -89,6 +91,7 @@ class Strikes(Base):
         row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, id=strike_id).one())
         dct = row.to_dict()
         await session.run_sync(lambda session: session.delete(row))
+        await session.close()
 
         logger.debug(f"Strike {strike_id} has been removed")
 
@@ -111,6 +114,8 @@ class Strikes(Base):
             for row in rows:
                 strikes.append(row.to_dict())
             return strikes
+        finally:
+            await session.close()
 
     @classmethod
     async def get_author_strikes(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild], author: t.Union[str, int, Member, User]) -> list:
@@ -129,6 +134,8 @@ class Strikes(Base):
             for row in rows:
                 strikes.append(row.to_dict())
             return strikes
+        finally:
+            await session.close()
 
     @classmethod
     async def get_strike_by_id(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild], strike_id: int) -> dict:
@@ -145,6 +152,8 @@ class Strikes(Base):
             return dct
         else:
             return row.to_dict()
+        finally:
+            await session.close()
 
     @classmethod
     async def get_guild_strikes(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild]) -> list:
@@ -162,6 +171,8 @@ class Strikes(Base):
             for row in rows:
                 strikes.append(row.to_dict())
             return strikes
+        finally:
+            session.close()
 
     def to_dict(self) -> dict:
         dct = {}

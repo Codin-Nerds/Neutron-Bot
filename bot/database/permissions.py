@@ -73,6 +73,7 @@ class Permissions(Base):
             values={"guild": guild, "role": role, time_type: time}
         )
         await session.commit()
+        await session.close()
 
     @classmethod
     async def get_permissions(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild], role: t.Union[str, int, Role]) -> dict:
@@ -90,6 +91,8 @@ class Permissions(Base):
             return dct
         else:
             return row.to_dict()
+        finally:
+            await session.close()
 
     @classmethod
     async def get_permission(
