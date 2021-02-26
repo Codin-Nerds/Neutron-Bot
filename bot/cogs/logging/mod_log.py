@@ -28,7 +28,7 @@ class ModLog(Cog):
         If the message was sent, return True, otherwise return False
         (might happen if mod_log channel isn't defined in database).
         """
-        mod_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "server_log", guild)
+        mod_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "mod_log", guild)
         mod_log_channel = guild.get_channel(mod_log_id)
         if mod_log_channel is None:
             return False
