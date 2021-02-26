@@ -1,7 +1,10 @@
 import datetime
 import typing as t
 
-from discord import CategoryChannel, Color, Embed, TextChannel, VoiceChannel
+from discord import (
+    CategoryChannel, Color, Embed, Guild,
+    Role, TextChannel, VoiceChannel
+)
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog
 
@@ -14,12 +17,14 @@ class ServerLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
+    # region: Channels
+
     @classmethod
     def make_channel_update_embed(cls, channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
         embed = None
 
         if channel_before.overwrites != channel_after.overwrites:
-            embed = cls._permissions_diff_embed(channel_before, channel_after)
+            embed = cls._channel_permissions_diff_embed(channel_before, channel_after)
 
         if isinstance(channel_before, TextChannel) and embed is None:
             slowmode_readable = lambda time: stringify_duration(time) if time != 0 else None
@@ -118,7 +123,7 @@ class ServerLog(Cog):
         return embed
 
     @staticmethod
-    def _permissions_diff_embed(channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
+    def _channel_permissions_diff_embed(channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
         if isinstance(channel_before, TextChannel):
             channel_type = "Text channel"
         elif isinstance(channel_before, VoiceChannel):
@@ -176,16 +181,6 @@ class ServerLog(Cog):
         return permissions_embed
 
     @Cog.listener()
-    async def on_guild_channel_delete(self, channel: GuildChannel) -> None:
-        # TODO: Finish this
-        pass
-
-    @Cog.listener()
-    async def on_guild_channel_create(self, channel: GuildChannel) -> None:
-        # TODO: Finish this
-        pass
-
-    @Cog.listener()
     async def on_guild_channel_update(self, channel_before: GuildChannel, channel_after: GuildChannel) -> None:
         embed = self.make_channel_update_embed(channel_before, channel_after)
         if embed is None:
@@ -198,7 +193,40 @@ class ServerLog(Cog):
 
         await server_log_channel.send(embed=embed)
 
-    # TODO: Add guild-level logs (location change, server rename, ...)
+    @Cog.listener()
+    async def on_guild_channel_delete(self, channel: GuildChannel) -> None:
+        # TODO: Finish this
+        pass
+
+    @Cog.listener()
+    async def on_guild_channel_create(self, channel: GuildChannel) -> None:
+        # TODO: Finish this
+        pass
+
+    # endregion
+    # region: Roles
+
+    @Cog.listener()
+    async def on_guild_role_create(self, role: Role) -> None:
+        # TODO: Finish this
+        pass
+
+    @Cog.listener()
+    async def on_guild_role_delete(self, role: Role) -> None:
+        # TODO: Finish this
+        pass
+
+    @Cog.listener()
+    async def on_guild_role_update(self, before: Role, after: Role) -> None:
+        # TODO: Finish this
+        pass
+
+    # endregion
+
+    @Cog.listener()
+    async def on_guild_update(self, before: Guild, after: Guild) -> None:
+        # TODO: Finish this
+        pass
 
 
 def setup(bot: Bot) -> None:
