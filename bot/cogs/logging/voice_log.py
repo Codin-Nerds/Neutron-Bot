@@ -17,12 +17,12 @@ class MessageLog(Cog):
         If the message was sent, return True, otherwise return False
         (might happen if voice_log channel isn't defined in database).
         """
-        mod_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "voice_log", guild)
-        mod_log_channel = guild.get_channel(mod_log_id)
-        if mod_log_channel is None:
+        voice_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "voice_log", guild)
+        voice_log_channel = guild.get_channel(int(voice_log_id))
+        if voice_log_channel is None:
             return False
 
-        await mod_log_channel.send(*send_args, **send_kwargs)
+        await voice_log_channel.send(*send_args, **send_kwargs)
         return True
 
     @Cog.listener()

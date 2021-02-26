@@ -17,6 +17,22 @@ class ServerLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
+    async def send_log(self, guild: Guild, *send_args, **send_kwargs) -> bool:
+        """
+        Try to send a log message to a server_log channel for given guild,
+        args and kwargs to this function will be used in the actual `Channel.send` call.
+
+        If the message was sent, return True, otherwise return False
+        (might happen if server_log channel isn't defined in database).
+        """
+        server_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "server_log", guild)
+        server_log_channel = guild.get_channel(int(server_log_id))
+        if server_log_channel is None:
+            return False
+
+        await server_log_channel.send(*send_args, **send_kwargs)
+        return True
+
     # region: Channels
 
     @classmethod
@@ -186,12 +202,7 @@ class ServerLog(Cog):
         if embed is None:
             return
 
-        server_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "server_log", channel_after.guild)
-        server_log_channel = channel_after.guild.get_channel(server_log_id)
-        if server_log_channel is None:
-            return
-
-        await server_log_channel.send(embed=embed)
+        await self.send_log.send(channel_after.guild, embed=embed)
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel: GuildChannel) -> None:

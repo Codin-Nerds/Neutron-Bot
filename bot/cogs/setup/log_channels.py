@@ -30,7 +30,7 @@ class LogChannelsSetup(Cog):
         description_lines = []
         for log_type in LogChannels.valid_log_types:
             channel_id = obtained_channels.get(log_type, None)
-            channel = ctx.guild.get_channel(channel_id)
+            channel = ctx.guild.get_channel(int(channel_id))
 
             readable_log_type = log_type.replace("_log", "").capitalize()
             description_lines.append(f"{readable_log_type} level logs: {channel.mention if channel else '<not configured>'}")
