@@ -11,6 +11,7 @@ PREFIX = config.COMMAND_PREFIX
 intents = Intents.default()
 intents.guilds = True
 intents.bans = True
+intents.messages = True
 intents.members = True  # Requires discord app permission
 
 bot = Bot(

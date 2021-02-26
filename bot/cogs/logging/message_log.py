@@ -6,7 +6,7 @@ from discord.raw_models import RawMessageDeleteEvent, RawMessageUpdateEvent
 
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
-from bot.utils.paste_upload import upload_attachments, upload_text
+from bot.utils.paste_upload import upload_attachments, upload_files, upload_text
 
 
 class MessageLog(Cog):
@@ -31,8 +31,64 @@ class MessageLog(Cog):
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
-        # TODO: Finish this
-        pass
+        # Ignore DMs
+        if not after.guild:
+            return
+
+        if after.author.bot:
+            return
+
+        response = (
+            f"**Author:** {after.author.mention}\n"
+            f"**Channel:** {after.channel.mention}\n"
+            f"**Message ID:** {after.id}"
+        )
+
+        # Limit log embed to 800 characters, to avoid huge messages
+        # cluttering the log, if message is longer, upload it instead.
+        if len(before.clean_content + after.clean_content) > 2000 - len(response):
+            # NOTE; Text uploading might be happening too often, and might have to be removed
+            # in the future
+            payload = [
+                {
+                    "name": "before",
+                    "content": {
+                        "format": "text",
+                        "value": before.content
+                    }
+                },
+                {
+                    "name": "after",
+                    "content": {
+                        "format": "text",
+                        "value": after.content
+                    }
+                },
+            ]
+
+            url = await upload_files(
+                self.bot.http_session, payload,
+                paste_name="Automatic message upload.",
+                paste_description="This paste was automatically generated from edited discrod message."
+            )
+            if url:
+                response += f"\n**Changes:** Message too long, check [message upload]({url})"
+            else:
+                response += "\n**Changes:** Message too long (WARNING: Automatic upload failed)"
+        else:
+            response += f"\n**Before:** {before.content}"
+            response += f"\n**After:** {after.content}"
+
+        response += f"\n[Jump link]({after.jump_url})"
+
+        embed = Embed(
+            title="Message edited",
+            description=response,
+            color=Color.dark_orange()
+        )
+
+        await self.send_log(after.guild, embed=embed)
+        # TODO: Add this message to ignored, for on_raw_message_edit
 
     @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent) -> None:
@@ -88,16 +144,47 @@ class MessageLog(Cog):
         )
 
         await self.send_log(message.guild, embed=embed)
-
-    @Cog.listener()
-    async def on_bulk_message_delete(self, messages: t.List[Message]) -> None:
-        # TODO: Finish this
-        pass
+        # TODO: Add this message to ignored, for on_raw_message_deletes
 
     @Cog.listener()
     async def on_raw_message_delete(self, payload: RawMessageDeleteEvent) -> None:
         # TODO: Finish this
         pass
+
+    @Cog.listener()
+    async def on_bulk_message_delete(self, messages: t.List[Message]) -> None:
+        # Ignore DMs
+        if not messages[0].guild:
+            return
+
+        if messages[0].author.bot:
+            return
+
+        # TODO: Ignore clean commands
+
+        response = f"**Amount:** {len(messages)}"
+
+        discovered_attachments = []
+        for message in messages:
+            for attachment in message.attachments:
+                # We could upload here, but bulk deletion might capture many of these
+                # and it's not worth to upload in these cases, bulk removal can't be initialized
+                # by regular users anyway, so not knowing what was removed isn't a huge issue
+                # since it was removed by ranked persion, for the same reason, we won't upload
+                # the text of these messages either
+                discovered_attachments.append(attachment.filename)
+        response += f"**Attachments:** {len(discovered_attachments)}"
+
+        response += f"\n[First message jump link]({message[0].jump_url})"
+
+        embed = Embed(
+            title="Bulk Message deletion",
+            description=response,
+            color=Color.dark_orange()
+        )
+
+        await self.send_log(message.guild, embed=embed)
+        # TODO: Add this message to ignored, for on_raw_message_deletes
 
     @Cog.listener()
     async def on_raw_bulk_message_delete(self, payload: RawMessageDeleteEvent) -> None:
