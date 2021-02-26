@@ -34,9 +34,10 @@ class Event(Enum):
     This isn't in sync with all discord.py real events, it is here
     to hold a unique identifier for each event
     """
-    member_kick = "member_kick"
     member_ban = "member_ban"
     member_unban = "member_unban"
+    member_kick = "member_kick"
+    member_mute = "member_mute"
 
     member_join = "member_join"
     member_remove = "member_remove"
