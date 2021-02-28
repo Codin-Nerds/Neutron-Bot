@@ -1,7 +1,10 @@
+import asyncio
 import datetime
+import textwrap
 import typing as t
 
 from discord import Color, Embed, Guild, Message
+from discord.errors import NotFound
 from discord.ext.commands import Cog
 from discord.raw_models import RawMessageDeleteEvent, RawMessageUpdateEvent
 
@@ -134,8 +137,71 @@ class MessageLog(Cog):
 
     @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent) -> None:
-        # TODO: Finish this
-        pass
+        """
+        Send an embed whenever uncached message got edited, we do not have the
+        previous contents of this message, so we can only send the current (edited)
+        content, and the fact that it was actually edited.
+
+        This listener trigers whenever a message is edited, this includes the messages
+        that are cached and trigger `on_message_edit` directly, which means we have to
+        ignore these.
+
+        Disocrd's API also triggers this listener whenever an embed is sent. This is quite
+        unexpected behavior for this event, and we should ignore it as it isn't an actual
+        message edit event.
+
+        In case neither of these cases are true, we may log the embed (with some further
+        checks which are also present in `on_message_edit`, such as DM check).
+        """
+        # Try to fetch the message before it may get removed, if we don't manage that
+        # we can ignore this event
+        try:
+            channel = self.bot.get_channel(int(payload.channel_id))
+            message = await channel.fetch_message(payload.message_id)
+        except NotFound:
+            return
+
+        # As described in docstring, this even also triggers on embed sending, if that's
+        # the case, we can simply ignore that
+        if "embeds" in payload.data and len(payload.data["embeds"]) > 0:
+            return
+
+        # Sleep for a while to leave enough time for normal even to execute, which will add this
+        # channel into the ignore list
+        await asyncio.sleep(1)
+        if self.is_ignored(message, Event.message_edit):
+            return
+
+        response = (
+            f"**Author:** {message.author.mention}\n"
+            f"**Channel:** {message.channel.mention}\n"
+            f"**Message ID:** {message.id}\n"
+            f"**Before:** This message is an uncached message, content can't be displayed"
+        )
+
+        if len(message.clean_content) > MAX_LOGGED_MESSAGE_SIZE:
+            url = await upload_text(
+                self.bot.http_session, message.content,
+                file_name="message.md", paste_name="Automatic message upload.",
+                paste_description="This paste was automatically generated from edited discrod message."
+            )
+            if url:
+                response += f"\n**After:** Message too long, check [message upload]({url})"
+            else:
+                response += "\n**After:** Message too long (WARNING: Automatic upload failed"
+        else:
+            response += f"\n**After:** {message.content}"
+
+        response += f"\n[Jump url]({message.jump_url})"
+
+        embed = Embed(
+            title="Uncached message edited",
+            description=response,
+            color=Color.dark_orange()
+        )
+        embed.timestamp = datetime.datetime.utcnow()
+
+        await self.send_log(message.guild, embed=embed)
 
     @Cog.listener()
     async def on_message_delete(self, message: Message) -> None:
@@ -198,8 +264,29 @@ class MessageLog(Cog):
 
     @Cog.listener()
     async def on_raw_message_delete(self, payload: RawMessageDeleteEvent) -> None:
-        # TODO: Finish this
-        pass
+        guild = self.bot.get_guild(payload.guild_id)
+
+        if not guild:
+            return
+
+        await asyncio.sleep(1)
+        if self.bot.log_is_ignored(Event.message_delete, (guild.id, payload.message_id)):
+            return
+
+        channel = self.bot.get_channel(payload.channel_id)
+        embed = Embed(
+            title="Uncached message deleted",
+            description=textwrap.dedent(
+                f"""
+                **Channel:** {channel.mention if channel else 'Unable to get channel'}
+                **Message ID:** {payload.message_id}
+                **Content:** This message is an uncached message, content can't be displayed
+                """
+            ),
+            color=Color.dark_orange()
+        )
+
+        await self.send_log(guild, embed=embed)
 
 
 def setup(bot: Bot) -> None:
