@@ -9,6 +9,7 @@ from bot.config import Event
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.paste_upload import upload_attachments, upload_files, upload_text
+from bot.utils.time import time_elapsed
 
 # We should limit the maximum message size allowed for
 # the embeds, to avoid huge embeds cluttering the message log
@@ -115,6 +116,11 @@ class MessageLog(Cog):
             response += f"\n**Before:** {before.content}"
             response += f"\n**After:** {after.content}"
 
+        if before.edited_at:
+            response += f"\n**Last edited:** {time_elapsed(before.edited_at, after.edited_at, max_units=3)}"
+        else:
+            response += f"\n**Initially created:** {time_elapsed(before.created_at, after.edited_at, max_units=3)}"
+
         response += f"\n[Jump link]({after.jump_url})"
 
         embed = Embed(
@@ -122,7 +128,7 @@ class MessageLog(Cog):
             description=response,
             color=Color.dark_orange()
         )
-        embed.timestamp = datetime.datetime.utcnow()
+        embed.timestamp = after.edited_at
 
         await self.send_log(after.guild, embed=embed)
 
@@ -178,6 +184,7 @@ class MessageLog(Cog):
         else:
             response += f"\n**Content:** {message.content}"
 
+        response += f"\n**Initially created: ** {time_elapsed(message.created_at, max_units=3)}"
         response += f"\n[Jump link]({message.jump_url})"
 
         embed = Embed(
