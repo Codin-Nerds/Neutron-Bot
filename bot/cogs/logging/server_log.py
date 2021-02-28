@@ -202,7 +202,7 @@ class ServerLog(Cog):
         if embed is None:
             return
 
-        await self.send_log.send(channel_after.guild, embed=embed)
+        await self.send_log(channel_after.guild, embed=embed)
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel: GuildChannel) -> None:
