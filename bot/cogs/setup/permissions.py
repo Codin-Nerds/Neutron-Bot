@@ -1,7 +1,8 @@
 import typing as t
 
 from discord import Color, Embed
-from discord.ext.commands import Cog, Context, RoleConverter, group
+from discord.ext.commands import Cog, Context, group
+from discord.ext.commands.converter import RoleConverter
 from discord.ext.commands.errors import MissingPermissions
 
 from bot.core.bot import Bot

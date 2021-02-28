@@ -3,7 +3,7 @@ import typing as t
 from json import JSONDecodeError
 
 from discord import Color, Embed
-from discord.ext.commands import Cog, Context, NotOwner, errors
+from discord.ext.commands import Cog, Context, errors
 from loguru import logger
 
 from bot.cogs.utils.embeds import InvalidEmbed
@@ -115,7 +115,7 @@ class ErrorHandler(Cog):
         )
 
     async def handle_check_failure(self, ctx: Context, exception: errors.CheckFailure) -> None:
-        if isinstance(exception, NotOwner):
+        if isinstance(exception, errors.NotOwner):
             msg = "❌ This command is only aviable to bot owners."
         else:
             msg = "❌ You don't have permission to run this command."

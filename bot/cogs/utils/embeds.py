@@ -4,7 +4,8 @@ from collections import defaultdict
 
 from discord import Embed, Member, TextChannel
 from discord.errors import HTTPException
-from discord.ext.commands import Cog, ColourConverter, Context, MessageConverter, group
+from discord.ext.commands import Cog, Context, group
+from discord.ext.commands.converter import ColourConverter, MessageConverter
 from discord.ext.commands.errors import CheckFailure, MissingPermissions
 
 from bot.core.bot import Bot

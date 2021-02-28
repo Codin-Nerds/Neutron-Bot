@@ -7,11 +7,9 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from discord import Member, User
 from discord.errors import NotFound
-from discord.ext.commands import (
-    BadArgument, Context, Converter,
-    MemberConverter, UserConverter,
-)
-from discord.ext.commands.errors import ConversionError, MemberNotFound, UserNotFound
+from discord.ext.commands import Context
+from discord.ext.commands.converter import Converter, MemberConverter, UserConverter
+from discord.ext.commands.errors import BadArgument, ConversionError, MemberNotFound, UserNotFound
 from loguru import logger
 
 
