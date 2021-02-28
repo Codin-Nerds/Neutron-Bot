@@ -34,11 +34,15 @@ class MessageLog(Cog):
                 color=Color.blue()
             )
         elif before.channel != after.channel:
+            description_lines = [f"**User:** {member.mention}"]
+            if before.channel:
+                description_lines.append(f"**Previous Channel:** {before.channel}")
+            if after.channel:
+                description_lines.append(f"**New Channel:** {after.channel}")
+
             embed = Embed(
                 title="User changed channels" if after.channel else "User left voice channel",
-                description=f"**User:** {member.mention}"
-                            f"\n**Channel:** {before.channel}"
-                            f"\n**New Channel:** {after.channel}" if after.channel else "",
+                description="\n".join(description_lines),
                 color=Color.blue()
             )
         elif before.deaf != after.deaf:
