@@ -2,12 +2,9 @@ import os
 from enum import Enum
 
 
-# Developer Mode Settings:
-DEV_MODE = True
+COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ">>")
 
-# Ownership settings:
-creator = "The Codin Nerds Team"
-devs = [711194921683648523, 306876636526280705]
+DEV_MODE = True
 
 # Aviable types of strikes
 STRIKE_TYPES = [
@@ -23,9 +20,6 @@ DATABASE = {
     "password": os.getenv("DATABASE_PASSWORD", "bot"),
 }
 DATABASE_ENGINE_STRING = f"postgresql+asyncpg://{DATABASE['user']}:{DATABASE['password']}@{DATABASE['host']}/{DATABASE['database']}"
-
-# Prefix Settings
-COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ">>")
 
 
 class Event(Enum):
@@ -44,4 +38,4 @@ class Event(Enum):
     member_update = "member_update"
 
     message_edit = "message_edit"
-    message_delete = "message_delette"
+    message_delete = "message_delete"
