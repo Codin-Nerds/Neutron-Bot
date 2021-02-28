@@ -1,5 +1,6 @@
 import time
 import typing as t
+from collections import defaultdict
 from datetime import datetime
 
 import aiohttp
@@ -9,6 +10,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from bot import config
+from bot.config import Event
 from bot.core.autoload import EXTENSIONS, readable_name
 from bot.database import Base as DbBase
 from bot.database import load_tables
@@ -23,6 +25,7 @@ class Bot(Base_Bot):
 
         self.start_time = datetime.utcnow()
         self.initial_call = True
+        self._ignored_log = defaultdict(set)
 
     async def load_extensions(self) -> None:
         """Load all listed cogs."""
@@ -99,3 +102,35 @@ class Bot(Base_Bot):
         if hasattr(self, "http_session"):
             await self.http_session.close()
         await super().close()
+
+    def log_ignore(self, event: Event, *items: t.Any) -> None:
+        """
+        Add event to the set of ignored events to abort log sending.
+
+        This function is meant for other cogs, to use and add ignored events,
+        which is useful, because if we trigger an action like banning with a command,
+        we may have more information about that ban, than we would get from the listener.
+        The cog that ignored some event can then send a log message directly, with this
+        additional info.
+
+        `items` can contain multiple uniquely identifiable keys for given events to be
+        ignored. This unique key will then be used for checking if given even it ignored.
+        """
+        for item in items:
+            if item not in self._ignored_log[event]:
+                self._ignored_log[event].add(item)
+
+    def log_is_ignored(self, event: Event, key: t.Any, remove: bool = True) -> bool:
+        """
+        Check if given event with uniquely identifiable `key` is present in
+        the ignore set, if it is, return `True`, otherwise return `False`.
+
+        By default, after this function is executed, the ignored entry will get removed,
+        because we already applied ignore as this check was used. If this isn't the case,
+        `remove` kwarg can be set to `False`, to prevent this automatic deletion.
+        """
+        found = key in self._ignored_log[event]
+        if found and remove:
+            self._ignored_log[event].remove(key)
+
+        return found

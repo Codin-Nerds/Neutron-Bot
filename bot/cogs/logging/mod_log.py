@@ -17,7 +17,6 @@ from bot.database.roles import Roles
 class ModLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.ignored = defaultdict(set)  # usage described in `ignore`
         self.audit_last = defaultdict(lambda: defaultdict(lambda: None))  # usage described in `_retreive_audit_action`
 
     async def send_log(self, guild: Guild, *send_args, **send_kwargs) -> bool:
@@ -36,23 +35,9 @@ class ModLog(Cog):
         await mod_log_channel.send(*send_args, **send_kwargs)
         return True
 
-    def ignore(self, event: Event, *items: t.Any) -> None:
-        """
-        Add event to the set of ignored events to abort log sending.
-
-        This function is meant for other cogs, to use and add ignored events,
-        which is useful, because if we trigger an action like banning with a command,
-        we may have more information about that ban, than we would get from the listener.
-        The cog that ignored some event can then send a log message directly, with this
-        additional info.
-        """
-        for item in items:
-            if item not in self.ignored[event]:
-                self.ignored[event].add(item)
-
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: t.Union[User, Member]) -> None:
-        if (guild.id, user.id) in self.ignored[Event.member_unban]:
+        if self.bot.log_is_ignored(Event.member_ban, (guild.id, user.id)):
             return
 
         unban_log_entry = await self._retreive_audit_action(guild, AuditLogAction.ban, target=user)
@@ -76,7 +61,7 @@ class ModLog(Cog):
 
     @Cog.listener()
     async def on_member_unban(self, guild: Guild, user: Member) -> None:
-        if (guild.id, user.id) in self.ignored[Event.member_unban]:
+        if self.bot.log_is_ignored(Event.member_unban, (guild.id, user.id)):
             return
 
         ban_log_entry = await self._retreive_audit_action(guild, AuditLogAction.unban, target=user)
@@ -105,7 +90,7 @@ class ModLog(Cog):
         when the member leaves, if there is, this wasn't a normal leave, but
         rather a kick. In which case, kick log is sent.
         """
-        if (member.guild.id, member.id) in self.ignored[Event.member_kick]:
+        if self.bot.log_is_ignored(Event.member_kick, (member.guild.id, member.id)):
             return
 
         kick_log_entry = await self._retreive_audit_action(
@@ -136,7 +121,7 @@ class ModLog(Cog):
         This is a handler which checks if muted role was added to given member,
         if it was, a log message is sent, describing this mute action.
         """
-        if (member_after.guild.id, member_after.id) in self.ignored[Event.member_mute]:
+        if self.bot.log_is_ignored(Event.member_mute, (member_after.guild.id, member_after.id)):
             return
 
         # Only continue if there was a role update. This listener does capture
@@ -246,8 +231,6 @@ class ModLog(Cog):
             self.audit_last[action][target] = last_log.created_at
 
         return last_log
-
-    # TODO: Consider moving `ignore` function to `bot` class, for other cogs
 
 
 def setup(bot: Bot) -> None:
