@@ -11,6 +11,12 @@ from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.paste_upload import upload_attachments, upload_files, upload_text
 
+# We should limit the maximum message size allowed for
+# the embeds, to avoid huge embeds cluttering the message log
+# for no reason, if they are over this size, we upload these
+# messages to a paste service instead.
+MAX_LOGGED_MESSAGE_SIZE = 800
+
 
 class MessageLog(Cog):
     def __init__(self, bot: Bot):
@@ -75,9 +81,9 @@ class MessageLog(Cog):
             f"**Message ID:** {after.id}"
         )
 
-        # Limit log embed to 800 characters, to avoid huge messages
-        # cluttering the log, if message is longer, upload it instead.
-        if len(before.clean_content + after.clean_content) > 2000 - len(response):
+        # Limit log embed to avoid huge messages cluttering the log,
+        # if message is longer, upload it instead.
+        if len(before.clean_content + after.clean_content) > MAX_LOGGED_MESSAGE_SIZE:
             # NOTE; Text uploading might be happening too often, and might have to be removed
             # in the future
             payload = [
@@ -156,9 +162,9 @@ class MessageLog(Cog):
             if url:
                 response += f" [link]({url})"
 
-        # Limit log embed to 800 characters, to avoid huge messages
-        # cluttering the log, if message is longer, upload it instead.
-        if len(message.clean_content) > 800 - len(response):
+        # Limit log embed to avoid huge messages cluttering the log,
+        # if message is longer, upload it instead.
+        if len(message.clean_content) > MAX_LOGGED_MESSAGE_SIZE:
             # NOTE; Text uploading might be happening too often, and might have to be removed
             # in the future
             url = await upload_text(
