@@ -24,6 +24,7 @@ MAX_LOGGED_MESSAGE_SIZE = 800
 class MessageLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
+        self._handled_cached = set()
 
     def is_ignored(self, message: Message, event: t.Optional[Event] = None) -> bool:
         """
@@ -72,11 +73,12 @@ class MessageLog(Cog):
         Messages can sometimes get quite long, and we don't want to clutter the log with them,
         if this is the case, we upload this message to a paste service and only provide a link.
         """
+        # Add this message to set of ignored messages for raw events, these trigger even if
+        # the message was cached, and to prevent double logging, we need to ignore them
+        self._handled_cached.add((after.guild.id, after.id))
+
         if self.is_ignored(message=after, event=Event.message_edit):
             return
-
-        # Add message to ignore list, to prevent raw event on executing
-        self.bot.log_ignore(Event.message_edit, (after.guild.id, after.id))
 
         response = (
             f"**Author:** {after.author.mention}\n"
@@ -166,9 +168,12 @@ class MessageLog(Cog):
         if "embeds" in payload.data and len(payload.data["embeds"]) > 0:
             return
 
-        # Sleep for a while to leave enough time for normal even to execute, which will add this
-        # channel into the ignore list
+        # Sleep for a while to leave enough time for normal event to execute, which will add this
+        # channel into the handled cached set, to avoid double logging
         await asyncio.sleep(1)
+        if (message.guild.id, message.id) in self._handled_cached:
+            return
+
         if self.is_ignored(message, Event.message_edit):
             return
 
@@ -215,6 +220,10 @@ class MessageLog(Cog):
         Messages can sometimes get quite long, and we don't want to clutter the log with them,
         if this is the case, we upload this message to a paste service and only provide a link.
         """
+        # Add this message to set of ignored messages for raw events, these trigger even if
+        # the message was cached, and to prevent double logging, we need to ignore them
+        self._handled_cached.add((message.guild.id, message.id))
+
         if self.is_ignored(message, Event.message_delete):
             return
 
@@ -264,12 +273,29 @@ class MessageLog(Cog):
 
     @Cog.listener()
     async def on_raw_message_delete(self, payload: RawMessageDeleteEvent) -> None:
+        """
+        Send an embed whenever uncached message got deleted, we do not have the
+        previous contents of this message, so we can only send the the fact that
+        it was actually deleted, and channel it happened in.
+
+        This listener trigers whenever a message is deleted, this includes the messages
+        that are cached and trigger `on_message_delete` directly, which means we have to
+        ignore these.
+
+        In case this wasn't the case, we may log the embed (with some further
+        checks which are also present in `on_message_edit`, such as DM check).
+        """
         guild = self.bot.get_guild(payload.guild_id)
 
         if not guild:
             return
 
+        # Sleep for a while to leave enough time for normal event to execute, which will add this
+        # channel into the handled cached set, to avoid double logging
         await asyncio.sleep(1)
+        if (payload.guild_id, payload.message_id) in self._handled_cached:
+            return
+
         if self.bot.log_is_ignored(Event.message_delete, (guild.id, payload.message_id)):
             return
 
@@ -285,6 +311,7 @@ class MessageLog(Cog):
             ),
             color=Color.dark_orange()
         )
+        embed.timestamp = datetime.datetime.utcnow()
 
         await self.send_log(guild, embed=embed)
 
