@@ -10,7 +10,6 @@ from discord import Color, DiscordException, Embed
 from discord import __version__ as discord_version
 from discord.ext.commands import Cog, Context, NotOwner, group
 
-from bot import config
 from bot.core.bot import Bot
 from bot.utils.time import stringify_timedelta
 
@@ -96,13 +95,13 @@ class Sudo(Cog):
         embed.add_field(name="**❯❯ System**", value=system, inline=True)
 
         embed.set_author(name=f"{self.bot.user.name}'s Stats", icon_url=self.bot.user.avatar_url)
-        embed.set_footer(text=f"Made by {config.creator}.")
+        embed.set_footer(text="Made by The Codin' Nerds Team.")
 
         await ctx.send(embed=embed)
 
     async def cog_check(self, ctx: Context) -> t.Optional[bool]:
         """Only the bot owners can use this."""
-        if ctx.author.id in config.devs:
+        if self.bot.is_owner(ctx.author):
             return True
 
         raise NotOwner
