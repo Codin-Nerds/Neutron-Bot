@@ -11,7 +11,7 @@ from discord.raw_models import RawMessageDeleteEvent, RawMessageUpdateEvent
 from bot.config import Event
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
-from bot.utils.paste_upload import upload_attachments, upload_files, upload_text
+from bot.utils.paste_upload import upload_files, upload_text
 from bot.utils.time import time_elapsed
 
 # We should limit the maximum message size allowed for
@@ -236,10 +236,8 @@ class MessageLog(Cog):
         )
 
         if message.attachments:
-            url = upload_attachments(self.bot.http_session, message.attachments)
-            response += f"\n**Attachments:** {len(message.attachments)}"
-            if url:
-                response += f" [link]({url})"
+            readable_attachments = ', '.join(attachment.filename for attachment in message.attachments)
+            response += f"\n**Attachment file-names:** {readable_attachments}"
 
         # Limit log embed to avoid huge messages cluttering the log,
         # if message is longer, upload it instead.
