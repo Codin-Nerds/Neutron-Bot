@@ -237,7 +237,7 @@ class MessageLog(Cog):
 
         if message.attachments:
             readable_attachments = ', '.join(attachment.filename for attachment in message.attachments)
-            response += f"\n**Attachment file-names:** {readable_attachments}"
+            response += f"\n**Attachment file-name{'s' if len(message.attachments) > 1 else ''}:** {readable_attachments}"
 
         # Limit log embed to avoid huge messages cluttering the log,
         # if message is longer, upload it instead.
