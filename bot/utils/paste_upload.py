@@ -36,7 +36,7 @@ async def upload_files(
         "files": files
     }
 
-    logger.debug(f"Uploading {len(files)} file{'s' if len(files) > 1 else ''} to paste.gg, size: {sys.getsizeof(files)}")
+    logger.debug(f"Uploading {len(files)} file{'s' if len(files) > 1 else ''} to paste.gg, size: {sys.getsizeof(files)}B")
     try:
         response = await http_session.post(
             "https://api.paste.gg/v1/pastes",
