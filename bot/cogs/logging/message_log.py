@@ -1,5 +1,4 @@
 import datetime
-import textwrap
 import typing as t
 
 from discord import Color, Embed, Guild, Message
@@ -192,33 +191,6 @@ class MessageLog(Cog):
 
     @Cog.listener()
     async def on_raw_message_delete(self, payload: RawMessageDeleteEvent) -> None:
-        # TODO: Finish this
-        pass
-
-    @Cog.listener()
-    async def on_bulk_message_delete(self, messages: t.List[Message]) -> None:
-        # TODO: Ignore clean commands
-
-        # We could upload these messages, but bulk deletion often includes big amounts
-        # of messages, and uploading these might take a long time, it's probably not worth it
-        embed = Embed(
-            title="Bulk Message deletion",
-            description=textwrap.dedent(
-                f"""
-                **Message Amount:** {len(messages)}
-                [First message jump link]({messages[0].jump_url})
-                [Last message jump link]({messages[-1].jump_url})
-                """
-            ),
-            color=Color.dark_orange()
-        )
-        embed.timestamp = datetime.datetime.utcnow()
-
-        await self.send_log(messages[0].guild, embed=embed)
-        # TODO: Add these messages to ignored, for on_raw_bulk_message_deletes
-
-    @Cog.listener()
-    async def on_raw_bulk_message_delete(self, payload: RawMessageDeleteEvent) -> None:
         # TODO: Finish this
         pass
 
