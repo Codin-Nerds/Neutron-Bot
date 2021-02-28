@@ -82,9 +82,12 @@ class MessageLog(Cog):
 
         response = (
             f"**Author:** {after.author.mention}\n"
-            f"**Channel:** {after.channel.mention}\n"
-            f"**Message ID:** {after.id}"
+            f"**Channel:** {after.channel.mention}"
         )
+        if before.edited_at:
+            response += f"\n**Last edited:** {time_elapsed(before.edited_at, after.edited_at, max_units=3)}"
+        else:
+            response += f"\n**Initially created:** {time_elapsed(before.created_at, after.edited_at, max_units=3)}"
 
         # Limit log embed to avoid huge messages cluttering the log,
         # if message is longer, upload it instead.
@@ -121,11 +124,6 @@ class MessageLog(Cog):
             response += f"\n**Before:** {before.content}"
             response += f"\n**After:** {after.content}"
 
-        if before.edited_at:
-            response += f"\n**Last edited:** {time_elapsed(before.edited_at, after.edited_at, max_units=3)}"
-        else:
-            response += f"\n**Initially created:** {time_elapsed(before.created_at, after.edited_at, max_units=3)}"
-
         response += f"\n[Jump link]({after.jump_url})"
 
         embed = Embed(
@@ -134,6 +132,7 @@ class MessageLog(Cog):
             color=Color.dark_orange()
         )
         embed.timestamp = after.edited_at
+        embed.set_footer(text=f"Message ID: {after.id}")
 
         await self.send_log(after.guild, embed=embed)
 
@@ -180,7 +179,6 @@ class MessageLog(Cog):
         response = (
             f"**Author:** {message.author.mention}\n"
             f"**Channel:** {message.channel.mention}\n"
-            f"**Message ID:** {message.id}\n"
             f"**Before:** This message is an uncached message, content can't be displayed"
         )
 
@@ -205,6 +203,7 @@ class MessageLog(Cog):
             color=Color.dark_orange()
         )
         embed.timestamp = datetime.datetime.utcnow()
+        embed.set_footer(text=f"Message ID: {message.id}\n")
 
         await self.send_log(message.guild, embed=embed)
 
@@ -233,7 +232,7 @@ class MessageLog(Cog):
         response = (
             f"**Author:** {message.author.mention}\n"
             f"**Channel:** {message.channel.mention}\n"
-            f"**Message ID:** {message.id}"
+            f"**Initially created: ** {time_elapsed(message.created_at, max_units=3)}"
         )
 
         if message.attachments:
@@ -259,7 +258,6 @@ class MessageLog(Cog):
         else:
             response += f"\n**Content:** {message.content}"
 
-        response += f"\n**Initially created: ** {time_elapsed(message.created_at, max_units=3)}"
         response += f"\n[Jump link]({message.jump_url})"
 
         embed = Embed(
@@ -268,6 +266,7 @@ class MessageLog(Cog):
             color=Color.dark_orange()
         )
         embed.timestamp = datetime.datetime.utcnow()
+        embed.set_footer(text=f"Message ID: {message.id}")
 
         await self.send_log(message.guild, embed=embed)
 
@@ -305,13 +304,13 @@ class MessageLog(Cog):
             description=textwrap.dedent(
                 f"""
                 **Channel:** {channel.mention if channel else 'Unable to get channel'}
-                **Message ID:** {payload.message_id}
                 **Content:** This message is an uncached message, content can't be displayed
                 """
             ),
             color=Color.dark_orange()
         )
         embed.timestamp = datetime.datetime.utcnow()
+        embed.set_footer(text=f"Message ID: {payload.message_id}")
 
         await self.send_log(guild, embed=embed)
 

@@ -38,7 +38,6 @@ class JoinLog(Cog):
                 f"""
                 **Mention:** {member.mention}
                 **Created:** {time_elapsed(member.created_at, max_units=3)}
-                **ID:** {member.id}
                 He is {Ordinal.make_ordinal(member.guild.member_count)} to join.
                 """
             ),
@@ -46,6 +45,8 @@ class JoinLog(Cog):
         )
         embed.timestamp = datetime.datetime.utcnow()
         embed.set_thumbnail(url=member.avatar_url)
+        embed.set_footer(f"Member ID: {member.id}")
+
         await self.send_log(member.guild, embed=embed)
 
     @Cog.listener()
@@ -58,7 +59,6 @@ class JoinLog(Cog):
                 **Mention:** {member.mention}
                 **Joined:** {time_elapsed(member.joined_at, max_units=3)}
                 **Roles:** {roles if roles else None}
-                **ID:** {member.id}
                 Server is now at {member.guild.member_count} members.
                 """
             ),
@@ -66,6 +66,8 @@ class JoinLog(Cog):
         )
         embed.timestamp = datetime.datetime.now()
         embed.set_thumbnail(url=member.avatar_url)
+        embed.set_footer(f"Member ID: {member.id}")
+
         await self.send_log(member.guild, embed=embed)
 
 
