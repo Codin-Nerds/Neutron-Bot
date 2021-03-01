@@ -106,6 +106,7 @@ class MemberLog(Cog):
             return
 
         embed.set_thumbnail(url=member_after.avatar_url)
+        embed.set_footer(text=f"Member ID: {member_after.id}")
         embed.timestamp = datetime.datetime.utcnow()
 
         await self.send_log(member_after.guild, embed=embed)
@@ -152,6 +153,7 @@ class MemberLog(Cog):
             return
 
         embed.set_thumbnail(url=user_after.avatar_url)
+        embed.set_footer(text=f"User ID: {user_after.id}")
         embed.timestamp = datetime.datetime.utcnow()
 
         member_log_channels = []
