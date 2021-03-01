@@ -76,7 +76,7 @@ class MemberLog(Cog):
                         **Mention:** {member_after.mention}
                         """
                     ),
-                    color=Color.blue()
+                    color=Color.red()
                 )
             else:
                 embed = Embed(
@@ -87,7 +87,7 @@ class MemberLog(Cog):
                         **Mention:** {member_after.mention}
                         """
                     ),
-                    color=Color.blue()
+                    color=Color.green()
                 )
         elif member_before.pending != member_after.pending:
             embed = Embed(

@@ -261,7 +261,7 @@ class MessageLog(Cog):
         embed = Embed(
             title="Message deleted",
             description=response,
-            color=Color.dark_orange()
+            color=Color.dark_red()
         )
         embed.timestamp = datetime.datetime.utcnow()
         embed.set_footer(text=f"Message ID: {message.id}")
@@ -305,7 +305,7 @@ class MessageLog(Cog):
                 **Content:** This message is an uncached message, content can't be displayed
                 """
             ),
-            color=Color.dark_orange()
+            color=Color.dark_red()
         )
         embed.timestamp = datetime.datetime.utcnow()
         embed.set_footer(text=f"Message ID: {payload.message_id}")
