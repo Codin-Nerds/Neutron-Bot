@@ -30,13 +30,13 @@ def make_audit_cache() -> AUDIT_CACHE_TYPE:
 
 async def last_audit_log(
     guild: Guild,
-    action: AuditLogAction,
+    actions: t.Iterable[AuditLogAction],
     target: t.Any = None,
     max_time: int = 5,
     audit_cache: t.Optional[AUDIT_CACHE_TYPE] = None,
 ) -> t.Optional[AuditLogEntry]:
     """
-    This function can be used, to obtain last audit entry for given `action`
+    This function can be used, to obtain last audit entry for given `actions`
     with given `target` (for example banned user) in given `max_time` (in seconds).
 
     Many listeners often doesn't contain all the things which we could need
@@ -52,13 +52,20 @@ async def last_audit_log(
     If an entry was found, `AuditLogEntry` is returned, otherwise, we return `None`.
     If bot doesn't have permission to access audit log, `Forbidden` exception is raised.
     """
-    audit_logs = await guild.audit_logs(limit=1, action=action).flatten()
-    try:
-        last_log = audit_logs[0]
-    except IndexError:  # No such entry found in audit log
+    found_logs = []
+    for action in actions:
+        try:
+            audit_logs = await guild.audit_logs(limit=1, action=action).flatten()
+            found_logs.extend(audit_logs)
+        except Forbidden as exc:  # Bot can't access audit logs
+            raise exc
+
+    # We haven't found any valid logs
+    if len(found_logs) == 0:
         return
-    except Forbidden as exc:  # Bot can't access audit logs
-        raise exc
+
+    # Get latest log from extracted ones
+    last_log = max(found_logs, key=lambda log_entry: log_entry.created_at)
 
     # Make sure to only go through audit logs within 5 seconds,
     # if this log is older, ignore it
@@ -89,7 +96,7 @@ async def last_audit_log(
 
 async def last_audit_log_with_fail_embed(
     guild: Guild,
-    action: AuditLogAction,
+    actions: t.Iterable[AuditLogAction],
     send_callback: t.Awaitable,
     target: t.Any = None,
     max_time: int = 5,
@@ -103,7 +110,7 @@ async def last_audit_log_with_fail_embed(
     to send this failing embed. Once this happens, we return `None`, instead of raising exception.
     """
     try:
-        last_log = await last_audit_log(guild, action, target, max_time, audit_cache)
+        last_log = await last_audit_log(guild, actions, target, max_time, audit_cache)
     except Forbidden:
         embed = Embed(
             title="Error parsing audit log",

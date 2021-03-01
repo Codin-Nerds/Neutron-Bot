@@ -42,7 +42,7 @@ class ModLog(Cog):
 
         unban_log_entry = await last_audit_log_with_fail_embed(
             guild,
-            action=AuditLogAction.ban,
+            actions=[AuditLogAction.ban],
             send_callback=partial(self.send_log, guild),
             target=user
         )
@@ -71,7 +71,7 @@ class ModLog(Cog):
 
         ban_log_entry = await last_audit_log_with_fail_embed(
             guild,
-            action=AuditLogAction.unban,
+            actions=[AuditLogAction.unban],
             send_callback=partial(self.send_log, guild),
             target=user
         )
@@ -105,7 +105,7 @@ class ModLog(Cog):
 
         kick_log_entry = await last_audit_log_with_fail_embed(
             member.guild,
-            action=AuditLogAction.kick,
+            actions=[AuditLogAction.kick],
             send_callback=partial(self.send_log, member.guild),
             target=member,
             allow_repeating=False
@@ -165,7 +165,7 @@ class ModLog(Cog):
 
         audit_entry = await last_audit_log_with_fail_embed(
             member_after.guild,
-            action=AuditLogAction.member_role_update,
+            actions=[AuditLogAction.member_role_update],
             send_callback=partial(self.send_log, member_after.guild),
             target=member_before
         )
