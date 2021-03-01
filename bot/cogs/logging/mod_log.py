@@ -53,9 +53,9 @@ class ModLog(Cog):
             title="User banned",
             description=textwrap.dedent(
                 f"""
-                User: {user.mention}
-                Author: {unban_log_entry.user.mention}
-                Reason: {unban_log_entry.reason}
+                **User:** {user.mention}
+                **Author:** {unban_log_entry.user.mention}
+                **Reason:** {unban_log_entry.reason if unban_log_entry.reason else "N/A"}
                 """
             ),
             color=Color.dark_red()
@@ -84,9 +84,9 @@ class ModLog(Cog):
             title="User unbanned",
             description=textwrap.dedent(
                 f"""
-                User: {user.mention}
-                Author: {ban_log_entry.user.mention}
-                Reason: {ban_log_entry.reason}
+                **User:** {user.mention}
+                **Author:** {ban_log_entry.user.mention}
+                **Reason:** {ban_log_entry.reason if ban_log_entry.reason else "N/A"}
                 """
             ),
             color=Color.dark_green(),
@@ -121,9 +121,9 @@ class ModLog(Cog):
             title="User kicked",
             description=textwrap.dedent(
                 f"""
-                User: {member.mention}
-                Author: {kick_log_entry.user.mention}
-                Reason: {kick_log_entry.reason}
+                **User:** {member.mention}
+                **Author:** {kick_log_entry.user.mention}
+                **Reason:** {kick_log_entry.reason if kick_log_entry.reason else "N/A"}
                 """
             ),
             color=Color.red()
@@ -167,7 +167,8 @@ class ModLog(Cog):
 
         # TODO: Add mute strike
 
-        description = f"User: {member_after.mention}"
+        action_type = "unmute" if removed_roles else "mute"
+        description = f"**User:** {member_after.mention}"
 
         audit_entry = await last_audit_log_with_fail_embed(
             member_after.guild,
@@ -176,12 +177,15 @@ class ModLog(Cog):
             target=member_before
         )
         if audit_entry is not None:
-            description += f"\nAuthor: {audit_entry.user.mention}\nReason: {audit_entry.reason}"
+            description += (
+                f"\n**{action_type.capitalize()}d By:** {audit_entry.user.mention}"
+                f"\n**Reason:** {audit_entry.reason if audit_entry.reason else 'N/A'}"
+            )
 
         embed = Embed(
-            title=f"User {'unmuted' if muted_role in removed_roles else 'muted'}",
+            title=f"User {action_type}d",
             description=description,
-            color=Color.orange()
+            color=Color.red() if action_type == "mute" else Color.green()
         )
         embed.set_thumbnail(url=member_after.avatar_url)
         embed.set_footer(text=f"User ID: {member_after.id}")
