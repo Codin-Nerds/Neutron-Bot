@@ -61,7 +61,9 @@ class ModLog(Cog):
             color=Color.dark_red()
         )
         embed.set_thumbnail(url=user.avatar_url)
+        embed.set_footer(text=f"User ID: {user.id}")
         embed.timestamp = unban_log_entry.created_at
+
         await self.send_log(guild, embed=embed)
 
     @Cog.listener()
@@ -90,7 +92,9 @@ class ModLog(Cog):
             color=Color.dark_green(),
         )
         embed.set_thumbnail(url=user.avatar_url)
+        embed.set_footer(text=f"User ID: {user.id}")
         embed.timestamp = ban_log_entry.created_at
+
         await self.send_log(guild, embed=embed)
 
     @Cog.listener()
@@ -108,7 +112,7 @@ class ModLog(Cog):
             actions=[AuditLogAction.kick],
             send_callback=partial(self.send_log, member.guild),
             target=member,
-            allow_repeating=False
+            audit_cache=self.audit_cache
         )
         if kick_log_entry is None:
             return
@@ -125,7 +129,9 @@ class ModLog(Cog):
             color=Color.red()
         )
         embed.set_thumbnail(url=member.avatar_url)
+        embed.set_footer(text=f"User ID: {member.id}")
         embed.timestamp = kick_log_entry.created_at
+
         await self.send_log(member.guild, embed=embed)
 
     @Cog.listener()
@@ -178,6 +184,7 @@ class ModLog(Cog):
             color=Color.orange()
         )
         embed.set_thumbnail(url=member_after.avatar_url)
+        embed.set_footer(text=f"User ID: {member_after.id}")
         embed.timestamp = audit_entry.created_at if audit_entry is not None else datetime.datetime.now()
 
         await self.send_log(member_after.guild, embed=embed)
