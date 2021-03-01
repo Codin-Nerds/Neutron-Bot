@@ -51,17 +51,17 @@ class JoinLog(Cog):
 
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
+        description = (
+            f"**Mention:** {member.mention}\n"
+            f"**Joined:** {time_elapsed(member.joined_at, max_units=3)}\n"
+        )
         roles = ", ".join(role.mention for role in member.roles[1:])
+        description += f"**Roles:** {roles}\n" if roles else ''
+        description += f"**Members:** Server is now at {member.guild.member_count} members."
+
         embed = Embed(
             title="Member left",
-            description=textwrap.dedent(
-                f"""
-                **Mention:** {member.mention}
-                **Joined:** {time_elapsed(member.joined_at, max_units=3)}
-                **Roles:** {roles if roles else None}
-                **Members:** Server is now at {member.guild.member_count} members.
-                """
-            ),
+            description=description,
             color=Color.dark_orange(),
         )
         embed.timestamp = datetime.datetime.now()
