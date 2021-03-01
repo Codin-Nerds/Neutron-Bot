@@ -1,23 +1,23 @@
 import datetime
 import textwrap
 import typing as t
-from collections import defaultdict
+from functools import partial
 
-from discord import AuditLogEntry, Color, Embed, Guild, Member, User
+from discord import Color, Embed, Guild, Member, User
 from discord.enums import AuditLogAction
-from discord.errors import Forbidden
 from discord.ext.commands import Cog
 
 from bot.config import Event
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.database.roles import Roles
+from bot.utils.audit_parse import last_audit_log_with_fail_embed, make_audit_cache
 
 
 class ModLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.audit_last = defaultdict(lambda: defaultdict(lambda: None))  # usage described in `_retreive_audit_action`
+        self.audit_cache = make_audit_cache()
 
     async def send_log(self, guild: Guild, *send_args, **send_kwargs) -> bool:
         """
@@ -40,7 +40,12 @@ class ModLog(Cog):
         if self.bot.log_is_ignored(Event.member_ban, (guild.id, user.id)):
             return
 
-        unban_log_entry = await self._retreive_audit_action(guild, AuditLogAction.ban, target=user)
+        unban_log_entry = await last_audit_log_with_fail_embed(
+            guild,
+            action=AuditLogAction.ban,
+            send_callback=partial(self.send_log, guild),
+            target=user
+        )
         if unban_log_entry is None:
             return
 
@@ -53,7 +58,7 @@ class ModLog(Cog):
                 Reason: {unban_log_entry.reason}
                 """
             ),
-            color=Color.dark_orange()
+            color=Color.dark_red()
         )
         embed.set_thumbnail(url=user.avatar_url)
         embed.timestamp = unban_log_entry.created_at
@@ -64,7 +69,12 @@ class ModLog(Cog):
         if self.bot.log_is_ignored(Event.member_unban, (guild.id, user.id)):
             return
 
-        ban_log_entry = await self._retreive_audit_action(guild, AuditLogAction.unban, target=user)
+        ban_log_entry = await last_audit_log_with_fail_embed(
+            guild,
+            action=AuditLogAction.unban,
+            send_callback=partial(self.send_log, guild),
+            target=user
+        )
         if ban_log_entry is None:
             return
 
@@ -77,7 +87,7 @@ class ModLog(Cog):
                 Reason: {ban_log_entry.reason}
                 """
             ),
-            color=Color.dark_orange(),
+            color=Color.dark_green(),
         )
         embed.set_thumbnail(url=user.avatar_url)
         embed.timestamp = ban_log_entry.created_at
@@ -93,9 +103,12 @@ class ModLog(Cog):
         if self.bot.log_is_ignored(Event.member_kick, (member.guild.id, member.id)):
             return
 
-        kick_log_entry = await self._retreive_audit_action(
-            member.guild, AuditLogAction.kick,
-            target=member, allow_repeating=False
+        kick_log_entry = await last_audit_log_with_fail_embed(
+            member.guild,
+            action=AuditLogAction.kick,
+            send_callback=partial(self.send_log, member.guild),
+            target=member,
+            allow_repeating=False
         )
         if kick_log_entry is None:
             return
@@ -109,7 +122,7 @@ class ModLog(Cog):
                 Reason: {kick_log_entry.reason}
                 """
             ),
-            color=Color.dark_orange()
+            color=Color.red()
         )
         embed.set_thumbnail(url=member.avatar_url)
         embed.timestamp = kick_log_entry.created_at
@@ -150,87 +163,24 @@ class ModLog(Cog):
 
         description = f"User: {member_after.mention}"
 
-        audit_entry = await self._retreive_audit_action(member_after.guild, AuditLogAction.member_role_update, target=member_before)
+        audit_entry = await last_audit_log_with_fail_embed(
+            member_after.guild,
+            action=AuditLogAction.member_role_update,
+            send_callback=partial(self.send_log, member_after.guild),
+            target=member_before
+        )
         if audit_entry is not None:
             description += f"\nAuthor: {audit_entry.user.mention}\nReason: {audit_entry.reason}"
 
         embed = Embed(
             title=f"User {'unmuted' if muted_role in removed_roles else 'muted'}",
             description=description,
-            color=Color.dark_orange()
+            color=Color.orange()
         )
         embed.set_thumbnail(url=member_after.avatar_url)
         embed.timestamp = audit_entry.created_at if audit_entry is not None else datetime.datetime.now()
 
         await self.send_log(member_after.guild, embed=embed)
-
-    async def _retreive_audit_action(
-        self,
-        guild: Guild,
-        action: AuditLogAction,
-        target: t.Any = None,
-        max_time: int = 5,
-        allow_repeating: bool = True,
-    ) -> t.Optional[AuditLogEntry]:
-        """
-        Many listeners often doesn't contain all the things which we could need
-        to construct a meaningful and descriptive log message. Audit entries
-        can help with this, because they contain useful information, such as
-        responsible moderator for given action, action reason, etc.
-
-        This function can be used, to obtain last audit entry for given `action`
-        with given `target` (for example banned user) in given `max_time` (in seconds).
-
-        There are some actions for which we don't want to be able to parse the same entry
-        of the audit log twice, even though it would still be within the `max_time` limit.
-        For that reason, there is `allow_repeating` keyword argument, which will block these.
-
-        If an entry was found, `AuditLogEntry` is returned, otherwise, we return `None`.
-        If bot doesn't have permission to access audit log, error embed is sent to
-        mod_log channel, and `None` is returned
-        """
-        audit_logs = await guild.audit_logs(limit=1, action=action).flatten()
-        try:
-            last_log = audit_logs[0]
-        except IndexError:
-            # No such entry found in audit log
-            return
-        except Forbidden:
-            # Bot can't access audit logs
-            embed = Embed(
-                title="Error parsing audit log",
-                description="Parsing audit log for kick actions failed, "
-                            "make sure to give the bot right to read audit log.",
-                color=Color.red()
-            )
-            embed.timestamp = datetime.datetime.utcnow()
-            await self.send_log(guild, ember=embed)
-            return
-
-        # Make sure to only go through audit logs within 5 seconds,
-        # if this log is older, ignore it
-        time_after = datetime.datetime.utcnow() - datetime.timedelta(seconds=max_time)
-        if last_log.created_at < time_after:
-            return
-
-        if target is not None and last_log.target != target:
-            # This entry was pointed at a different target
-            return
-
-        if allow_repeating is False:
-            # Sometimes, we might not want to retreive the same audit log entry twice,
-            # for example this is the case with kicks, if we already found an audit entry
-            # for a valid kick, user rejoined and left on his own, within our `max_time`,
-            # we would mark that leaving as a kick action, because we will scan the same
-            # audit log entry twice, to prevent this, we keep a cache of times audit
-            # log entries were created, and if they match, they're the same entry
-            if last_log.created_at == self.audit_last[action][target]:
-                return
-            # if this wasn't the case, the entry is valid, and we should update the cache
-            # with the new processed entry time
-            self.audit_last[action][target] = last_log.created_at
-
-        return last_log
 
 
 def setup(bot: Bot) -> None:
