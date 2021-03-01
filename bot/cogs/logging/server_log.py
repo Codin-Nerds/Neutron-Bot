@@ -284,19 +284,51 @@ class ServerLog(Cog):
     # region: Roles
 
     @Cog.listener()
-    async def on_guild_role_create(self, role: Role) -> None:
-        # TODO: Finish this
-        pass
-
-    @Cog.listener()
-    async def on_guild_role_delete(self, role: Role) -> None:
-        # TODO: Finish this
-        pass
-
-    @Cog.listener()
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
         # TODO: Finish this
         pass
+
+    @Cog.listener()
+    async def on_guild_role_create(self, role: Role) -> None:
+        last_log = await last_audit_log_with_fail_embed(
+            role.guild,
+            actions=[AuditLogAction.role_create],
+            send_callback=partial(self.send_log, role.guild)
+        )
+        description = f"**Role:** {role.mention}"
+        if last_log:
+            description += f"\n**Created by:** {last_log.user.mention}"
+
+        embed = Embed(
+            title="Role created",
+            description=description,
+            color=Color.green()
+        )
+        embed.set_footer(text=f"Role ID: {role.id}")
+        embed.timestamp = datetime.datetime.utcnow()
+        await self.send_log(role.guild, embed=embed)
+
+    @Cog.listener()
+    async def on_guild_role_delete(self, role: Role) -> None:
+        last_log = await last_audit_log_with_fail_embed(
+            role.guild,
+            actions=[AuditLogAction.role_delete],
+            send_callback=partial(self.send_log, role.guild)
+        )
+
+        description = f"**Role:** @{role.name}"
+
+        if last_log:
+            description += f"\n**Removed by:** {last_log.user.mention}"
+
+        embed = Embed(
+            title="Role deleted",
+            description=description,
+            color=Color.red()
+        )
+        embed.set_footer(text=f"Role ID: {role.id}")
+        embed.timestamp = datetime.datetime.utcnow()
+        await self.send_log(role.guild, embed=embed)
 
     # endregion
 
