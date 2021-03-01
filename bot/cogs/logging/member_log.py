@@ -1,13 +1,16 @@
 import datetime
 import textwrap
 import typing as t
+from functools import partial
 
 from discord import Color, Embed, Guild, Member, User
 from discord.channel import TextChannel
+from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
+from bot.utils.audit_parse import last_audit_log_with_fail_embed
 
 
 class MemberLog(Cog):
@@ -58,7 +61,6 @@ class MemberLog(Cog):
                 color=Color.blue()
             )
         elif member_before.roles != member_after.roles:
-            # TODO: Consider looking into audit logs to find who did this
             old_roles = set(member_before.roles)
             new_roles = set(member_after.roles)
 
@@ -67,28 +69,28 @@ class MemberLog(Cog):
             removed_roles = old_roles - new_roles
             added_roles = new_roles - old_roles
 
-            if removed_roles:
-                embed = Embed(
-                    title="Role removed",
-                    description=textwrap.dedent(
-                        f"""
-                        **Role:** {removed_roles.pop().mention}
-                        **Mention:** {member_after.mention}
-                        """
-                    ),
-                    color=Color.red()
-                )
-            else:
-                embed = Embed(
-                    title="Role added",
-                    description=textwrap.dedent(
-                        f"""
-                        **Role:** {added_roles.pop().mention}
-                        **Mention:** {member_after.mention}
-                        """
-                    ),
-                    color=Color.green()
-                )
+            action_type = "remove" if removed_roles else "add"
+
+            description = (
+                f"**Role:** {removed_roles.pop().mention if removed_roles else added_roles.pop().mention}\n"
+                f"**Mention:** {member_after.mention}"
+            )
+
+            last_log = await last_audit_log_with_fail_embed(
+                member_after.guild,
+                actions=[AuditLogAction.member_role_update],
+                target=member_after,
+                send_callback=partial(self.send_log, member_after.guild)
+            )
+
+            if last_log:
+                description += f"\n**{action_type.capitalize()}ed by:** {last_log.user.mention}"
+
+            embed = Embed(
+                title=f"Role {action_type}ed",
+                description=description,
+                color=Color.green() if action_type == "add" else Color.red()
+            )
         elif member_before.pending != member_after.pending:
             embed = Embed(
                 title="User verified",
