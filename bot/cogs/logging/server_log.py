@@ -1,15 +1,16 @@
 import datetime
 import typing as t
+from functools import partial
 
-from discord import (
-    CategoryChannel, Color, Embed, Guild,
-    Role, TextChannel, VoiceChannel
-)
+from discord import Color, Embed, Guild, Role
 from discord.abc import GuildChannel
+from discord.channel import CategoryChannel, TextChannel, VoiceChannel
+from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
+from bot.utils.audit_parse import last_audit_log_with_fail_embed
 from bot.utils.time import stringify_duration
 
 
@@ -35,16 +36,33 @@ class ServerLog(Cog):
 
     # region: Channels
 
-    @classmethod
-    def make_channel_update_embed(cls, channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
+    @staticmethod
+    def channel_path(channel: GuildChannel) -> str:
+        """
+        Format path to given channel without direct mentioning,
+        if this channel will be removed afterwards, we can know which
+        category it belonged to.
+        """
+        if channel.category:
+            return f"{channel.category}/#{channel.name}"
+        return f"#{channel.name}"
+
+    def channel_type(self, channel: GuildChannel) -> str:
+        """Classify given channel and return it's category name (str)."""
+        if isinstance(channel, CategoryChannel):
+            return "Category"
+        elif isinstance(channel, VoiceChannel):
+            return "Voice channel"
+        return "Text channel"
+
+    async def make_channel_update_embed(self, channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
         embed = None
 
         if channel_before.overwrites != channel_after.overwrites:
-            embed = cls._channel_permissions_diff_embed(channel_before, channel_after)
-
-        if isinstance(channel_before, TextChannel) and embed is None:
+            embed = await self._channel_permissions_diff_embed(channel_before, channel_after)
+        elif isinstance(channel_before, TextChannel):
             slowmode_readable = lambda time: stringify_duration(time) if time != 0 else None
-            embed = cls._specific_channel_update_embed(
+            embed = await self._specific_channel_update_embed(
                 channel_before, channel_after,
                 title="Text Channel updated",
                 check_params={
@@ -55,9 +73,9 @@ class ServerLog(Cog):
                     "category": "Category",
                 }
             )
-        if isinstance(channel_before, VoiceChannel) and embed is None:
+        elif isinstance(channel_before, VoiceChannel):
             readable_bitrate = lambda bps: f"{round(bps/1000)}kbps"
-            embed = cls._specific_channel_update_embed(
+            embed = await self._specific_channel_update_embed(
                 channel_before, channel_after,
                 title="Voice Channel updated",
                 check_params={
@@ -67,8 +85,8 @@ class ServerLog(Cog):
                     "category": "Category",
                 }
             )
-        if isinstance(channel_before, CategoryChannel) and embed is None:
-            embed = cls._specific_channel_update_embed(
+        elif isinstance(channel_before, CategoryChannel):
+            embed = await self._specific_channel_update_embed(
                 channel_before, channel_after,
                 title="Category Channel updated",
                 check_params={
@@ -77,13 +95,16 @@ class ServerLog(Cog):
                 }
             )
 
-        if embed is not None:
-            embed.timestamp = datetime.datetime.now()
+        if embed is None:
+            return
+
+        embed.timestamp = datetime.datetime.now()
+        embed.set_footer(text=f"Channel ID: {channel_after.id}")
 
         return embed
 
-    @staticmethod
-    def _specific_channel_update_embed(
+    async def _specific_channel_update_embed(
+        self,
         channel_before: GuildChannel,
         channel_after: GuildChannel,
         title: str,
@@ -99,9 +120,20 @@ class ServerLog(Cog):
             * string: readable description of the update variable
             * tuple (callable, string): callable is ran which on obtained values for better readability
         """
+        description = f"**Channel:** {channel_after.mention}"
+
+        last_log = await last_audit_log_with_fail_embed(
+            channel_after.guild,
+            actions=[AuditLogAction.channel_update],
+            send_callback=partial(self.send_log, channel_after.guild)
+        )
+
+        if last_log:
+            description += f"\n**Updated by:** {last_log.user.mention}"
+
         embed = Embed(
             title=title,
-            description=f"**Channel:** {channel_after.mention}",
+            description=description,
             color=Color.dark_blue()
         )
 
@@ -138,14 +170,8 @@ class ServerLog(Cog):
 
         return embed
 
-    @staticmethod
-    def _channel_permissions_diff_embed(channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
-        if isinstance(channel_before, TextChannel):
-            channel_type = "Text channel"
-        elif isinstance(channel_before, VoiceChannel):
-            channel_type = "Voice channel"
-        elif isinstance(channel_before, CategoryChannel):
-            channel_type = "Category channel"
+    async def _channel_permissions_diff_embed(self, channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
+        channel_type = self.channel_type(channel_after)
 
         embed_lines = []
         all_overwrites = set(channel_before.overwrites.keys()).union(set(channel_after.overwrites.keys()))
@@ -185,12 +211,22 @@ class ServerLog(Cog):
         if len(embed_lines) == 0:
             return
 
-        embed_text = f"{channel_after.mention} permissions have been updated.\n\n"
-        embed_text += "\n".join(embed_lines)
+        description = f"**Channel:** {channel_after.mention}\n"
+
+        last_log = await last_audit_log_with_fail_embed(
+            channel_after.guild,
+            actions=[AuditLogAction.overwrite_create, AuditLogAction.overwrite_delete, AuditLogAction.overwrite_update],
+            send_callback=partial(self.send_log, channel_after.guild)
+        )
+
+        if last_log:
+            description += f"**Updated by:** {last_log.user.mention}\n\n"
+
+        description += "\n".join(embed_lines)
 
         permissions_embed = Embed(
             title=f"{channel_type} permissions updated",
-            description=embed_text,
+            description=description,
             color=Color.dark_blue()
         )
 
@@ -198,7 +234,7 @@ class ServerLog(Cog):
 
     @Cog.listener()
     async def on_guild_channel_update(self, channel_before: GuildChannel, channel_after: GuildChannel) -> None:
-        embed = self.make_channel_update_embed(channel_before, channel_after)
+        embed = await self.make_channel_update_embed(channel_before, channel_after)
         if embed is None:
             return
 
@@ -206,13 +242,43 @@ class ServerLog(Cog):
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel: GuildChannel) -> None:
-        # TODO: Finish this
-        pass
+        last_log = await last_audit_log_with_fail_embed(
+            channel.guild,
+            actions=[AuditLogAction.channel_delete],
+            send_callback=partial(self.send_log, channel.guild)
+        )
+        description = f"**Channel path:** {self.channel_path(channel)}"
+        if last_log:
+            description += f"\n**Removed by:** {last_log.user.mention}"
+
+        embed = Embed(
+            title=f"{self.channel_type(channel)} removed",
+            description=description,
+            color=Color.red()
+        )
+        embed.set_footer(text=f"Channel ID: {channel.id}")
+        embed.timestamp = datetime.datetime.utcnow()
+        await self.send_log(channel.guild, embed=embed)
 
     @Cog.listener()
     async def on_guild_channel_create(self, channel: GuildChannel) -> None:
-        # TODO: Finish this
-        pass
+        last_log = await last_audit_log_with_fail_embed(
+            channel.guild,
+            actions=[AuditLogAction.channel_create],
+            send_callback=partial(self.send_log, channel.guild)
+        )
+        description = f"**Channel path:** {self.channel_path(channel)}"
+        if last_log:
+            description += f"\n**Created by:** {last_log.user.mention}"
+
+        embed = Embed(
+            title=f"{self.channel_type(channel)} created",
+            description=description,
+            color=Color.green()
+        )
+        embed.set_footer(text=f"Channel ID: {channel.id}")
+        embed.timestamp = datetime.datetime.utcnow()
+        await self.send_log(channel.guild, embed=embed)
 
     # endregion
     # region: Roles
