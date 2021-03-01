@@ -25,7 +25,7 @@ class Bot(Base_Bot):
 
         self.start_time = datetime.utcnow()
         self.initial_call = True
-        self._ignored_log = defaultdict(set)
+        self._ignored_logs = defaultdict(set)
 
     async def load_extensions(self) -> None:
         """Load all listed cogs."""
@@ -117,8 +117,8 @@ class Bot(Base_Bot):
         ignored. This unique key will then be used for checking if given even it ignored.
         """
         for item in items:
-            if item not in self._ignored_log[event]:
-                self._ignored_log[event].add(item)
+            if item not in self._ignored_logs[event]:
+                self._ignored_logs[event].add(item)
 
     def log_is_ignored(self, event: Event, key: t.Any, remove: bool = True) -> bool:
         """
@@ -129,8 +129,8 @@ class Bot(Base_Bot):
         because we already applied ignore as this check was used. If this isn't the case,
         `remove` kwarg can be set to `False`, to prevent this automatic deletion.
         """
-        found = key in self._ignored_log[event]
+        found = key in self._ignored_logs[event]
         if found and remove:
-            self._ignored_log[event].remove(key)
+            self._ignored_logs[event].remove(key)
 
         return found
