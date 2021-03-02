@@ -17,7 +17,8 @@ format_mapping = {
         "bitrate": lambda bps: f"{round(bps/1000)}kbps"
     },
     Guild: {
-        "afk_timeout": lambda time: stringify_duration(time)
+        "afk_timeout": lambda time: stringify_duration(time),
+        "_large": None
     }
 }
 
@@ -57,15 +58,19 @@ def add_change_field(
     Compare passed objects `obj_before` and `obj_after`.
     Return the passed embed with 2 new fields, containing formatted differences between
     these 2 objects. Returned object is a new Embed, to avoid mutating original.
+
+    `mapping_override` can be set, which provides an easy way of ignoring or editing the
+    values comming from the diff. This mapping looks like this:
+    {
+        "overridden attribute": lambda x: f"{x} seconds",
+        "not shown attribute": None
+    }
     """
     if mapping_override is None:
         mapping_override = {}
 
     # Preserve original objects and work on copies
     embed = embed.copy()
-    mapping_override = mapping_override.copy()
-
-    mapping_override.update(format_mapping)
 
     field_before_lines = []
     field_after_lines = []
@@ -73,15 +78,40 @@ def add_change_field(
     for attr_name, old, new in compare_objects(obj_before, obj_after):
         # Try to go through `format_mapping` dictionary and check if there is
         # so type, which matches our current objects, if there is, check it's
-        # mapping and apply the format function from it to our obtained values.
-        for obj_type in mapping_override:
+        # mapping and apply the format function from it to our obtained values
+        skip = False
+        for obj_type, format_content in format_mapping.items():
             if isinstance(obj_after, obj_type):
-                func = format_mapping[obj_type].get(attr_name, lambda x: x)
+                # If attribute is handled by user specified override, handle it
+                # below this for loop, we don't want to override these values
+                if attr_name in mapping_override:
+                    break
+
+                func = format_content.get(attr_name, lambda x: x)
+                if func is None:
+                    skip = True
+                    break
                 new = func(new)
                 old = func(old)
                 break
 
-        attr_name = attr_name.replace("_", " ").capitalize()
+        # Go through similar process as above, but with user defined values
+        for overridden_attr_name, override_func in mapping_override:
+            if overridden_attr_name == attr_name:
+                if override_func is None:
+                    skip = True
+                    break
+
+                new = override_func(new)
+                old = override_func(old)
+                break
+
+        if skip:
+            continue
+
+        attr_name = attr_name.replace("_", " ").replace(".", " ").capitalize()
+        new = str(new).replace("_", " ")
+        old = str(old).replace("_", " ")
 
         field_before_lines.append(f"**{attr_name}:** {old}")
         field_after_lines.append(f"**{attr_name}:** {new}")
