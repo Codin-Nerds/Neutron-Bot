@@ -1,17 +1,16 @@
 import datetime
-import typing as t
 from functools import partial
 
 from discord import Color, Embed, Guild, Role
 from discord.abc import GuildChannel
-from discord.channel import CategoryChannel, TextChannel, VoiceChannel
+from discord.channel import CategoryChannel, VoiceChannel
 from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.audit_parse import last_audit_log_with_fail_embed
-from bot.utils.time import stringify_duration
+from bot.utils.diff import add_change_field, add_channel_perms_field
 
 
 class ServerLog(Cog):
@@ -55,188 +54,48 @@ class ServerLog(Cog):
             return "Voice channel"
         return "Text channel"
 
-    async def make_channel_update_embed(self, channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
-        embed = None
-
+    @Cog.listener()
+    async def on_guild_channel_update(self, channel_before: GuildChannel, channel_after: GuildChannel) -> None:
         if channel_before.overwrites != channel_after.overwrites:
-            embed = await self._channel_permissions_diff_embed(channel_before, channel_after)
-        elif isinstance(channel_before, TextChannel):
-            slowmode_readable = lambda time: stringify_duration(time) if time != 0 else None
-            embed = await self._specific_channel_update_embed(
-                channel_before, channel_after,
-                title="Text Channel updated",
-                check_params={
-                    "name": "Name",
-                    "topic": "Topic",
-                    "is_nsfw": (lambda is_nsfw_func: is_nsfw_func(), "NSFW"),
-                    "slowmode_delay": (slowmode_readable, "Slowmode delay"),
-                    "category": "Category",
-                }
-            )
-        elif isinstance(channel_before, VoiceChannel):
-            readable_bitrate = lambda bps: f"{round(bps/1000)}kbps"
-            embed = await self._specific_channel_update_embed(
-                channel_before, channel_after,
-                title="Voice Channel updated",
-                check_params={
-                    "name": "Name",
-                    "bitrate": (readable_bitrate, "Bitrate"),
-                    "user_limit": "User limit",
-                    "category": "Category",
-                }
-            )
-        elif isinstance(channel_before, CategoryChannel):
-            embed = await self._specific_channel_update_embed(
-                channel_before, channel_after,
-                title="Category Channel updated",
-                check_params={
-                    "name": "Name",
-                    "is_nsfw": "NSFW",
-                }
+            description = f"**Channel:** {channel_after.mention}\n"
+
+            last_log = await last_audit_log_with_fail_embed(
+                channel_after.guild,
+                actions=[AuditLogAction.overwrite_create, AuditLogAction.overwrite_delete, AuditLogAction.overwrite_update],
+                send_callback=partial(self.send_log, channel_after.guild)
             )
 
-        if embed is None:
-            return
+            if last_log:
+                description += f"**Updated by:** {last_log.user.mention}\n\n"
+
+            embed = Embed(
+                title=f"{self.channel_type(channel_after)} permissions updated",
+                description=description,
+                color=Color.dark_blue()
+            )
+
+            embed = add_channel_perms_field(embed, channel_before, channel_after)
+        else:
+            description = f"**Channel:** {channel_after.mention}"
+
+            last_log = await last_audit_log_with_fail_embed(
+                channel_after.guild,
+                actions=[AuditLogAction.channel_update],
+                send_callback=partial(self.send_log, channel_after.guild)
+            )
+
+            if last_log:
+                description += f"\n**Updated by:** {last_log.user.mention}"
+
+            embed = Embed(
+                title=f"{self.channel_type(channel_after)} updated",
+                description=description,
+                color=Color.dark_blue()
+            )
+            embed = add_change_field(embed, channel_before, channel_after)
 
         embed.timestamp = datetime.datetime.now()
         embed.set_footer(text=f"Channel ID: {channel_after.id}")
-
-        return embed
-
-    async def _specific_channel_update_embed(
-        self,
-        channel_before: GuildChannel,
-        channel_after: GuildChannel,
-        title: str,
-        check_params: dict
-    ) -> t.Optional[Embed]:
-        """
-        Generate embed for difference between 2 passed channels.
-
-        `check_params` is a dictionary which defines what variables should
-        be compared.
-        Keys should always be strings, referring to variable names.
-        Values are either:
-            * string: readable description of the update variable
-            * tuple (callable, string): callable is ran which on obtained values for better readability
-        """
-        description = f"**Channel:** {channel_after.mention}"
-
-        last_log = await last_audit_log_with_fail_embed(
-            channel_after.guild,
-            actions=[AuditLogAction.channel_update],
-            send_callback=partial(self.send_log, channel_after.guild)
-        )
-
-        if last_log:
-            description += f"\n**Updated by:** {last_log.user.mention}"
-
-        embed = Embed(
-            title=title,
-            description=description,
-            color=Color.dark_blue()
-        )
-
-        field_before_text = []
-        field_after_text = []
-
-        for parameter_name, value in check_params.items():
-            before_param = getattr(channel_before, parameter_name)
-            after_param = getattr(channel_after, parameter_name)
-            if isinstance(value, tuple):
-                func = value[0]
-                before_param = func(before_param)
-                after_param = func(after_param)
-                # Continue with 2nd element (should be parameter name string)
-                value = value[1]
-
-            if before_param != after_param:
-                field_before_text.append(f"**{value}:** {before_param}")
-                field_after_text.append(f"**{value}:** {after_param}")
-
-        if len(field_after_text) == 0:
-            return
-
-        embed.add_field(
-            name="Before",
-            value="\n".join(field_before_text),
-            inline=True
-        )
-        embed.add_field(
-            name="After",
-            value="\n".join(field_after_text),
-            inline=True
-        )
-
-        return embed
-
-    async def _channel_permissions_diff_embed(self, channel_before: GuildChannel, channel_after: GuildChannel) -> t.Optional[Embed]:
-        channel_type = self.channel_type(channel_after)
-
-        embed_lines = []
-        all_overwrites = set(channel_before.overwrites.keys()).union(set(channel_after.overwrites.keys()))
-
-        for overwrite_for in all_overwrites:
-            before_overwrites = channel_before.overwrites_for(overwrite_for)
-            after_overwrites = channel_after.overwrites_for(overwrite_for)
-
-            if before_overwrites == after_overwrites:
-                continue
-
-            embed_lines.append(f"**Overwrite changes for {overwrite_for.mention}:**")
-
-            for before_perm, after_perm in zip(before_overwrites, after_overwrites):
-                if before_perm[1] != after_perm[1]:
-                    perm_name = before_perm[0].replace("_", " ").capitalize()
-
-                    if before_perm[1] is True:
-                        before_emoji = "✅"
-                    elif before_perm[1] is False:
-                        before_emoji = "❌"
-                    else:
-                        before_emoji = "⬜"
-
-                    if after_perm[1] is True:
-                        after_emoji = "✅"
-                    elif after_perm[1] is False:
-                        after_emoji = "❌"
-                    else:
-                        after_emoji = "⬜"
-
-                    embed_lines.append(f"**`{perm_name}:`** {before_emoji} ➜ {after_emoji}")
-
-        # Don't send an embed without permissions edited,
-        # it only means that an override was added, but it's
-        # staying with all permissions at `None`
-        if len(embed_lines) == 0:
-            return
-
-        description = f"**Channel:** {channel_after.mention}\n"
-
-        last_log = await last_audit_log_with_fail_embed(
-            channel_after.guild,
-            actions=[AuditLogAction.overwrite_create, AuditLogAction.overwrite_delete, AuditLogAction.overwrite_update],
-            send_callback=partial(self.send_log, channel_after.guild)
-        )
-
-        if last_log:
-            description += f"**Updated by:** {last_log.user.mention}\n\n"
-
-        description += "\n".join(embed_lines)
-
-        permissions_embed = Embed(
-            title=f"{channel_type} permissions updated",
-            description=description,
-            color=Color.dark_blue()
-        )
-
-        return permissions_embed
-
-    @Cog.listener()
-    async def on_guild_channel_update(self, channel_before: GuildChannel, channel_after: GuildChannel) -> None:
-        embed = await self.make_channel_update_embed(channel_before, channel_after)
-        if embed is None:
-            return
 
         await self.send_log(channel_after.guild, embed=embed)
 
@@ -334,8 +193,27 @@ class ServerLog(Cog):
 
     @Cog.listener()
     async def on_guild_update(self, before: Guild, after: Guild) -> None:
-        # TODO: Finish this
-        pass
+        description = "Guild configuration has changed."
+
+        last_log = await last_audit_log_with_fail_embed(
+            after,
+            actions=[AuditLogAction.guild_update],
+            send_callback=partial(self.send_log, after)
+        )
+
+        if last_log:
+            description += f"\n**Updated by:** {last_log.user.mention}"
+
+        embed = Embed(
+            title="Guild updated",
+            description=description,
+            color=Color.dark_gold()
+        )
+        embed = add_change_field(embed, before, after)
+
+        embed.timestamp = datetime.datetime.now()
+
+        await self.send_log(after, embed=embed)
 
 
 def setup(bot: Bot) -> None:

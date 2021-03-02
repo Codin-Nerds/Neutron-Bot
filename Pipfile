@@ -20,6 +20,7 @@ discord-ext-menus = {git="https://github.com/Rapptz/discord-ext-menus"}
 asyncpg = "~=0.21.0"
 sqlalchemy = "==1.4.0b3"
 aiohttp = "~=3.7.4"
+deepdiff = "*"
 
 [scripts]
 start = "python -m bot"
