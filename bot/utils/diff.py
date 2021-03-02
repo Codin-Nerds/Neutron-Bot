@@ -135,6 +135,11 @@ def add_channel_perms_field(
     channel_before: GuildChannel,
     channel_after: GuildChannel,
 ) -> Embed:
+    """
+    Compare overwrites fo passed channels `channel_before` and `channel_after`.
+    Return the passed embed with a new field, containing formatted differences between
+    channel permission overrides. Returned object is a new Embed, to avoid mutating original.
+    """
     embed_lines = []
     all_overwrites = set(channel_before.overwrites.keys()).union(set(channel_after.overwrites.keys()))
 
