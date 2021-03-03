@@ -105,7 +105,7 @@ def compare_objects(
             continue
 
         new = formatting(new)
-        old = formatting(new)
+        old = formatting(old)
 
         changes.append(ValueUpdate(attr_name=attr_name, new_value=new, old_value=old))
 
