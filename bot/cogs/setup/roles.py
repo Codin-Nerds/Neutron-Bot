@@ -39,7 +39,7 @@ class RolesSetup(Cog):
             description_lines.append(f"{readable_role_type} role: {readable_role}")
 
         embed = Embed(
-            title=f"Permissions for {role} role",
+            title="Server role setup",
             description="\n".join(description_lines),
             color=Color.blue()
         )
