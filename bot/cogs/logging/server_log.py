@@ -10,7 +10,7 @@ from discord.ext.commands import Cog
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.audit_parse import last_audit_log_with_fail_embed
-from bot.utils.diff import add_change_field, add_channel_perms_field
+from bot.utils.diff import add_change_field, add_channel_perms_field, add_permissions_field
 
 
 class ServerLog(Cog):
@@ -144,8 +144,31 @@ class ServerLog(Cog):
 
     @Cog.listener()
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
-        # TODO: Finish this
-        pass
+        description = f"**Role:** {after.mention}"
+
+        last_log = await last_audit_log_with_fail_embed(
+            after.guild,
+            actions=[AuditLogAction.role_update],
+            send_callback=partial(self.send_log, after.guild)
+        )
+
+        embed = Embed(
+            title="Role updated",
+            description=description,
+            color=Color.dark_gold()
+        )
+
+        if last_log:
+            description += f"\n**Updated by:** {last_log.user.mention}"
+
+        if before.permissions != after.permissions:
+            embed = add_permissions_field(embed, before.permissions, after.permissions)
+        else:
+            embed = add_change_field(embed, before, after)
+
+        embed.timestamp = datetime.datetime.now()
+
+        await self.send_log(after.guild, embed=embed)
 
     @Cog.listener()
     async def on_guild_role_create(self, role: Role) -> None:
