@@ -3,7 +3,7 @@ import typing as t
 from collections import namedtuple
 
 from deepdiff import DeepDiff
-from discord import Embed, Guild
+from discord import Embed, Guild, Role
 from discord.abc import GuildChannel
 from discord.channel import TextChannel, VoiceChannel
 from discord.permissions import Permissions
@@ -21,6 +21,9 @@ format_mapping = {
     Guild: {
         "afk_timeout": lambda time: stringify_duration(time),
         "_large": None
+    },
+    Role: {
+        "_colour": lambda colour: hex(colour).replace("0x", "#").upper()
     }
 }
 
@@ -64,6 +67,7 @@ def _get_format_mapping_for(obj: t.Any, mapping_override: t.Optional[dict] = Non
 def compare_objects(
     obj_before: t.Any,
     obj_after: t.Any,
+    *,
     use_format_mapping: bool = True,
     mapping_override: t.Optional[dict] = None
 ) -> t.List[ValueUpdate]:
@@ -116,6 +120,7 @@ def add_change_field(
     embed: Embed,
     obj_before: t.Any,
     obj_after: t.Any,
+    *,
     mapping_override: t.Optional[dict] = None
 ) -> Embed:
     """
@@ -139,7 +144,7 @@ def add_change_field(
     field_before_lines = []
     field_after_lines = []
 
-    for attr_name, old, new in compare_objects(obj_before, obj_after, mapping_override):
+    for attr_name, old, new in compare_objects(obj_before, obj_after, mapping_override=mapping_override):
         attr_name = attr_name.replace("_", " ").replace(".", " ").capitalize()
         new = str(new).replace("_", " ")
         old = str(old).replace("_", " ")
