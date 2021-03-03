@@ -1,31 +1,9 @@
 import datetime
 import typing as t
-from collections import defaultdict
 
 from discord import AuditLogEntry, Color, Embed, Guild
 from discord.enums import AuditLogAction
 from discord.errors import Forbidden
-
-# To uniquely identify each action in auditlog, cache must be:
-# defaultdict for guilds, holding
-# defaultdicts for audit actions, holding
-# defaultdicts for targets, holding
-# timestamp (creation) of these actions
-AUDIT_CACHE_TYPE = t.DefaultDict[Guild, t.DefaultDict[AuditLogAction, t.DefaultDict[t.Any, t.Optional[datetime.datetime]]]]
-
-
-def make_audit_cache() -> AUDIT_CACHE_TYPE:
-    """
-    Audit caching has a relatively complex defaultdict setup, which
-    isn't easy to immediately understand, this function is here to
-    provide a simple creator for this specific type.
-
-    We have this, in order to be able to uniquely identify any audit
-
-    Reasoning behind use of this specific type is described above the definition of
-    `AUDIT_CACHE_TYPE`, above this function.
-    """
-    return defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
 
 
 async def last_audit_log(
@@ -33,7 +11,7 @@ async def last_audit_log(
     actions: t.Iterable[AuditLogAction],
     target: t.Any = None,
     max_time: int = 5,
-    audit_cache: t.Optional[AUDIT_CACHE_TYPE] = None,
+    audit_cache: t.Optional[t.Set[int]] = None,
 ) -> t.Optional[AuditLogEntry]:
     """
     This function can be used, to obtain last audit entry for given `actions`
@@ -51,6 +29,9 @@ async def last_audit_log(
 
     If an entry was found, `AuditLogEntry` is returned, otherwise, we return `None`.
     If bot doesn't have permission to access audit log, `Forbidden` exception is raised.
+
+    NOTE: Currently `audit_cache` is a set of AuditLogEntry IDs, because entries aren't hashable
+    This will be changing in discord.py 1.7, and this should be updated once 1.7 is released.
     """
     found_logs = []
     for action in actions:
@@ -84,12 +65,12 @@ async def last_audit_log(
     # audit log entry twice, to prevent this, we keep a cache of times audit
     # log entries were created, and if they match, they're the same entry
     if audit_cache is not None:
-        if last_log.created_at == audit_cache[guild][action][target]:
+        if last_log.id not in audit_cache:
             return
 
         # if this wasn't the case, the entry is valid, and we should update the cache
         # with the new processed entry time
-        audit_cache[guild][action][target] = last_log.created_at
+        audit_cache.add(last_log.id)
 
     return last_log
 
@@ -100,7 +81,7 @@ async def last_audit_log_with_fail_embed(
     send_callback: t.Awaitable,
     target: t.Any = None,
     max_time: int = 5,
-    audit_cache: t.Optional[AUDIT_CACHE_TYPE] = None,
+    audit_cache: t.Set[int] = None,
 ) -> t.Optional[AuditLogEntry]:
     """
     This functions extends functionality of `last_audit_log` from `bot.utils.audit_parse`.

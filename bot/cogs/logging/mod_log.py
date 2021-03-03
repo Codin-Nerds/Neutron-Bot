@@ -11,13 +11,13 @@ from bot.config import Event
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.database.roles import Roles
-from bot.utils.audit_parse import last_audit_log_with_fail_embed, make_audit_cache
+from bot.utils.audit_parse import last_audit_log_with_fail_embed
 
 
 class ModLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.audit_cache = make_audit_cache()
+        self.audit_cache = set()
 
     async def send_log(self, guild: Guild, *send_args, **send_kwargs) -> bool:
         """
