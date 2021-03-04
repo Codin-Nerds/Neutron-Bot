@@ -3,7 +3,8 @@ import typing as t
 from collections import defaultdict
 
 from discord import TextChannel
-from discord.ext.commands import Cog, Context, MissingPermissions, command
+from discord.ext.commands import Cog, Context, command
+from discord.ext.commands.errors import MissingPermissions
 from loguru import logger
 
 from bot.core.bot import Bot
@@ -32,7 +33,7 @@ class Lock(Cog):
         - 0: Channel was already silenced
         - -1: Channel was silenced manually
         """
-        default_role_id = await Roles.get_role(self.bot.db_session, "default", channel.guild)
+        default_role_id = await Roles.get_role(self.bot.db_engine, "default", channel.guild)
         if default_role_id is None:
             default_role_id = channel.guild.default_role.id
         default_role = channel.guild.get_role(default_role_id)
@@ -49,7 +50,7 @@ class Lock(Cog):
 
         self.previous_permissions[channel.guild][channel] = current_permissions
         # Store staff role into dict in order to have it accessable for the synchronous `cog_unload` function
-        self.staff_roles[channel.guild] = await Roles.get_role(self.bot.db_session, "staff", channel.guild)
+        self.staff_roles[channel.guild] = await Roles.get_role(self.bot.db_engine, "staff", channel.guild)
         await channel.set_permissions(default_role, **dict(current_permissions, send_messages=False))
 
         return 1
@@ -65,7 +66,7 @@ class Lock(Cog):
         -1: Channel was already unsilenced manually
         -2: Channel was silenced manually
         """
-        default_role_id = await Roles.get_role(self.bot.db_session, "default", channel.guild)
+        default_role_id = await Roles.get_role(self.bot.db_engine, "default", channel.guild)
         if default_role_id is None:
             default_role_id = channel.guild.default_role.id
         default_role = channel.guild.get_role(default_role_id)
@@ -99,7 +100,7 @@ class Lock(Cog):
         if duration is None:
             duration = float("inf")
 
-        max_duration = await Permissions.get_permission_from_member(self.bot.db_session, self.bot, "lock", ctx.guild, ctx.author)
+        max_duration = await Permissions.get_permission_from_member(self.bot.db_engine, self.bot, "lock", ctx.guild, ctx.author)
         if duration > max_duration:
             raise MissingPermissions(["sufficient_locktime"])
 
@@ -168,7 +169,7 @@ class Lock(Cog):
         if ctx.author.permissions_in(ctx.channel).manage_messages:
             return True
 
-        return False
+        return MissingPermissions("Only members with manage messages rights can use this command.")
 
 
 def setup(bot: Bot) -> None:

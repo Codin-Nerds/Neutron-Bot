@@ -1,6 +1,6 @@
 import os
 
-from discord import Game
+from discord import Game, Intents
 
 from bot import config
 from bot.core.bot import Bot
@@ -8,10 +8,17 @@ from bot.core.bot import Bot
 TOKEN = os.getenv("BOT_TOKEN")
 PREFIX = config.COMMAND_PREFIX
 
+intents = Intents.default()
+intents.guilds = True
+intents.bans = True
+intents.messages = True
+intents.members = True  # Requires discord app permission
+
 bot = Bot(
     command_prefix=PREFIX,
     activity=Game(name=f"Ping me using {PREFIX}help"),
     case_insensitive=True,
+    intents=intents
 )
 
 

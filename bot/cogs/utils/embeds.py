@@ -4,8 +4,9 @@ from collections import defaultdict
 
 from discord import Embed, Member, TextChannel
 from discord.errors import HTTPException
-from discord.ext.commands import Cog, ColourConverter, Context, MessageConverter, group
-from discord.ext.commands.errors import CheckFailure
+from discord.ext.commands import Cog, Context, group
+from discord.ext.commands.converter import ColourConverter, MessageConverter
+from discord.ext.commands.errors import CheckFailure, MissingPermissions
 
 from bot.core.bot import Bot
 from bot.utils.converters import Unicode
@@ -383,13 +384,16 @@ class Embeds(Cog):
     # endregion
 
     def cog_check(self, ctx: Context) -> bool:
-        """Only allow users with manage messages permission to invoke commands in this cog.
+        """
+        Only allow users with manage messages permission to invoke commands in this cog.
 
         This is needed because Embeds can be much longer in comparison to regular messages,
         therefore it would be very easy to spam things and clutter the chat.
         """
-        perms = ctx.author.permissions_in(ctx.channel)
-        return perms.manage_messages
+        if ctx.author.permissions_in(ctx.channel).manage_messages:
+            return True
+
+        return MissingPermissions("Only members with manage messages rights can use this command.")
 
 
 def setup(bot: Bot) -> Bot:

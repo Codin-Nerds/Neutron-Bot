@@ -36,3 +36,7 @@ class Event(Enum):
     member_join = "member_join"
     member_remove = "member_remove"
     member_update = "member_update"
+    user_update = "user_update"
+
+    message_edit = "message_edit"
+    message_delete = "message_delete"

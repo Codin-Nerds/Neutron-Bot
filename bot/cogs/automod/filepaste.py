@@ -1,74 +1,16 @@
-import json
 import textwrap
-import typing as t
 
-from discord import Attachment, Color, Embed, Message, NotFound
+from discord import Color, Embed, Message
 from discord.ext.commands import Cog
 from loguru import logger
 
 from bot.core.bot import Bot
+from bot.utils.paste_upload import upload_attachments
 
 
 class FilePaste(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-
-    async def upload_attachments(self, attachments: t.List[Attachment], max_file_size: int = 500_000) -> t.Optional[str]:
-        """
-        Try to upload given `attachments` to paste.gg service.
-
-        Attachments which doesn't follow UTF-8 encoding will be ignored.
-        Attachments which weren't found (were already removed) will be ignored.
-        Attachments over `max_file_size` (defaults to 500KB) will be ignored.
-        If there aren't any applicable attachments to be uploaded, return None.
-        Otherwise return URL to the uploaded content of given attachments.
-        """
-
-        upload_files = []
-        for attachment in attachments:
-            # Don't try loading files over maximum size
-            if attachment.size > max_file_size:
-                logger.debug(f"Attachment {attachment.filename} skipped, maximum size surpassed ({attachment.size} > {max_file_size})")
-                continue
-
-            try:
-                content = await attachment.read()
-                value = content.decode("utf-8")
-            except (NotFound, UnicodeDecodeError):
-                continue
-            else:
-                upload_files.append({
-                    "name": attachment.filename,
-                    "content": {
-                        "format": "text",
-                        "value": value
-                    }
-                })
-
-        if len(upload_files) == 0:
-            return
-
-        payload = {
-            "name": "Automatic attachment paste.",
-            "description": "This paste was automatically generated from a discord message attachment.",
-            "files": upload_files
-        }
-        try:
-            response = await self.bot.http_session.post(
-                "https://api.paste.gg/v1/pastes",
-                headers={"Content-Type": "application/json"},
-                data=json.dumps(payload)
-            )
-        except ConnectionError:
-            logger.warning("Failed to paste content to paste.gg, Ended with ConnectionError.")
-            return
-
-        if response.status != 201:
-            logger.warning(f"Failed to paste content to paste.gg, ended with {response.status}.")
-            return
-        json_response = await response.json()
-        paste_id = json_response["result"]["id"]
-        return f"https://www.paste.gg/{paste_id}"
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -109,7 +51,7 @@ class FilePaste(Cog):
         if len(affected_attachments) == 0:
             return
 
-        url = await self.upload_attachments(affected_attachments)
+        url = await upload_attachments(self.bot.http_session, affected_attachments)
 
         embed = Embed(
             title="Your message got zapped by our spam filter.",

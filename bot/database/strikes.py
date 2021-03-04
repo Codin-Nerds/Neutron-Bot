@@ -4,7 +4,7 @@ from discord import Guild, Member, User
 from loguru import logger
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from bot.database import Base, get_str_guild, get_str_user, upsert
 
@@ -16,7 +16,8 @@ class StrikeIndex(Base):
     next_id = Column(Integer, nullable=False, default=0)
 
     @classmethod
-    async def get_id(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> int:
+    async def get_id(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild]) -> int:
+        session = AsyncSession(bind=engine)
         guild = get_str_guild(guild)
 
         # Logic for increasing strike ID if it was already found
@@ -25,6 +26,7 @@ class StrikeIndex(Base):
         next_id = row.next_id + 1
         row.next_id = next_id
         await session.commit()
+        await session.close()
         return next_id
 
 
@@ -42,7 +44,7 @@ class Strikes(Base):
     @classmethod
     async def set_strike(
         cls,
-        session: AsyncSession,
+        engine: AsyncEngine,
         guild: t.Union[str, int, Guild],
         author: t.Union[str, int, Member],
         user: t.Union[str, int, Member, User],
@@ -50,6 +52,8 @@ class Strikes(Base):
         reason: t.Optional[str],
         strike_id: t.Optional[int] = None
     ) -> int:
+        session = AsyncSession(bind=engine)
+
         guild = get_str_guild(guild)
         author = get_str_user(author)
         user = get_str_user(user)
@@ -75,23 +79,29 @@ class Strikes(Base):
             }
         )
         await session.commit()
+        await session.close()
         return strike_id
 
     @classmethod
-    async def remove_strike(cls, session: AsyncSession, guild: t.Union[str, int, Guild], strike_id: int) -> dict:
+    async def remove_strike(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild], strike_id: int) -> dict:
+        session = AsyncSession(bind=engine)
+
         guild = get_str_guild(guild)
 
         row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, id=strike_id).one())
         dct = row.to_dict()
         await session.run_sync(lambda session: session.delete(row))
+        await session.close()
 
         logger.debug(f"Strike {strike_id} has been removed")
 
         return dct
 
     @classmethod
-    async def get_user_strikes(cls, session: AsyncSession, guild: t.Union[str, int, Guild], user: t.Union[str, int, Member, User]) -> list:
+    async def get_user_strikes(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild], user: t.Union[str, int, Member, User]) -> list:
         """Obtain all strikes on `guild` for `user` from the database."""
+        session = AsyncSession(bind=engine)
+
         guild = get_str_guild(guild)
         user = get_str_user(user)
 
@@ -104,10 +114,14 @@ class Strikes(Base):
             for row in rows:
                 strikes.append(row.to_dict())
             return strikes
+        finally:
+            await session.close()
 
     @classmethod
-    async def get_author_strikes(cls, session: AsyncSession, guild: t.Union[str, int, Guild], author: t.Union[str, int, Member, User]) -> list:
+    async def get_author_strikes(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild], author: t.Union[str, int, Member, User]) -> list:
         """Obtain all strikes on `guild` by `author` from the database."""
+        session = AsyncSession(bind=engine)
+
         guild = get_str_guild(guild)
         author = get_str_user(author)
 
@@ -120,10 +134,14 @@ class Strikes(Base):
             for row in rows:
                 strikes.append(row.to_dict())
             return strikes
+        finally:
+            await session.close()
 
     @classmethod
-    async def get_strike_by_id(cls, session: AsyncSession, guild: t.Union[str, int, Guild], strike_id: int) -> dict:
+    async def get_strike_by_id(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild], strike_id: int) -> dict:
         """Obtain specific strike in `guild` with id of `strike_id` from the database."""
+        session = AsyncSession(bind=engine)
+
         guild = get_str_guild(guild)
 
         try:
@@ -134,10 +152,14 @@ class Strikes(Base):
             return dct
         else:
             return row.to_dict()
+        finally:
+            await session.close()
 
     @classmethod
-    async def get_guild_strikes(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> list:
+    async def get_guild_strikes(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild]) -> list:
         """Obtain all strikes belonging to `guild` from the database."""
+        session = AsyncSession(bind=engine)
+
         guild = get_str_guild(guild)
 
         try:
@@ -149,6 +171,8 @@ class Strikes(Base):
             for row in rows:
                 strikes.append(row.to_dict())
             return strikes
+        finally:
+            session.close()
 
     def to_dict(self) -> dict:
         dct = {}

@@ -4,7 +4,7 @@ from discord import Guild, TextChannel
 from loguru import logger
 from sqlalchemy import Column, String
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from bot.database import Base, get_str_channel, get_str_guild, upsert
 
@@ -19,27 +19,31 @@ class LogChannels(Base):
     message_log = Column(String, nullable=True)
     member_log = Column(String, nullable=True)
     join_log = Column(String, nullable=True)
+    voice_log = Column(String, nullable=True)
+
+    valid_log_types = ["server_log", "mod_log", "message_log", "member_log", "join_log", "voice_log"]
 
     @classmethod
-    def _get_normalized_log_type(log_type: str) -> str:
+    def _get_normalized_log_type(cls, log_type: str) -> str:
         """Make sure `log_type` is in proper format and is valid."""
         log_type = log_type if log_type.endswith("_log") else log_type + "_log"
 
-        valid_log_types = ["server_log", "mod_log", "message_log", "member_log", "join_log"]
-        if log_type not in valid_log_types:
-            raise ValueError(f"`log_type` received invalid type: {log_type}, valid types: {', '.join(valid_log_types)}")
+        if log_type not in cls.valid_log_types:
+            raise ValueError(f"`log_type` received invalid type: {log_type}, valid types: {', '.join(cls.valid_log_types)}")
 
         return log_type
 
     @classmethod
     async def set_log_channel(
         cls,
-        session: AsyncSession,
+        engine: AsyncEngine,
         log_type: str,
         guild: t.Union[str, int, Guild],
         channel: t.Union[str, int, TextChannel]
     ) -> None:
         """Store given `channel` as `log_type` log channel for `guild` into the database."""
+        session = AsyncSession(engine)
+
         guild = get_str_guild(guild)
         channel = get_str_channel(channel)
         log_type = cls._get_normalized_log_type(log_type)
@@ -52,10 +56,13 @@ class LogChannels(Base):
             values={"guild": guild, log_type: channel}
         )
         await session.commit()
+        await session.close()
 
     @classmethod
-    async def get_log_channels(cls, session: AsyncSession, guild: t.Union[str, int, Guild]) -> dict:
+    async def get_log_channels(cls, engine: AsyncEngine, guild: t.Union[str, int, Guild]) -> dict:
         """Obtain defined log channels for given `guild` from the database."""
+        session = AsyncSession(engine)
+
         guild = get_str_guild(guild)
 
         try:
@@ -66,12 +73,14 @@ class LogChannels(Base):
             return dct
         else:
             return row.to_dict()
+        finally:
+            await session.close()
 
     @classmethod
-    async def get_log_channel(cls, session: AsyncSession, log_type: str, guild: t.Union[str, int, Guild]) -> dict:
-        log_type = cls._get_normalized_time_type(log_type)
+    async def get_log_channel(cls, engine: AsyncEngine, log_type: str, guild: t.Union[str, int, Guild]) -> dict:
+        log_type = cls._get_normalized_log_type(log_type)
 
-        log_channels = await cls.get_log_channels(session, guild)
+        log_channels = await cls.get_log_channels(engine, guild)
         return log_channels[log_type]
 
     def to_dict(self) -> dict:

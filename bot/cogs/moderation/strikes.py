@@ -1,7 +1,7 @@
 import typing as t
 
 from discord.ext.commands import Cog, Context, group
-from discord.ext.commands.errors import BadArgument
+from discord.ext.commands.errors import BadArgument, MissingPermissions
 from sqlalchemy.exc import NoResultFound
 
 from bot.config import STRIKE_TYPES
@@ -40,13 +40,13 @@ class Strikes(Cog):
         if strike_type not in STRIKE_TYPES:
             raise BadArgument(f"Invalid strike type, possible types are: `{', '.join(STRIKE_TYPES)}`")
 
-        strike_id = await StrikesDB.set_strike(self.bot.db_session, ctx.guild, user, ctx.author, strike_type, reason)
+        strike_id = await StrikesDB.set_strike(self.bot.db_engine, ctx.guild, user, ctx.author, strike_type, reason)
         await ctx.send(f"✅ {strike_type} strike (ID: `{strike_id}`) applied to {user.mention}, reason: `{reason}`")
 
     @strike_group.command(aliases=["del"])
     async def remove(self, ctx: Context, strike_id: int) -> None:
         try:
-            await StrikesDB.remove_strike(self.bot.db_session, ctx.guild, strike_id)
+            await StrikesDB.remove_strike(self.bot.db_engine, ctx.guild, strike_id)
         except NoResultFound:
             await ctx.send(f"❌ Strike with ID `{strike_id}` does not exist.")
         else:
@@ -61,7 +61,7 @@ class Strikes(Cog):
         if ctx.author.permissions_in(ctx.channel).administrator:
             return True
 
-        return False
+        raise MissingPermissions("Only members with administrator rights can use this command.")
 
 
 def setup(bot: Bot) -> None:

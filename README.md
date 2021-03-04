@@ -18,10 +18,11 @@ If you want to run this bot on your own, you can simply follow this guide:
 1. Create bot on Discord's [bot portal](https://discord.com/developers/applications/)
 2. Make a **New Application**
 3. Go to **Bot** settings and click on **Add Bot**
-4. Give **Administrator** permission to bot
-5. You will find your bot **TOKEN** there, it is important that you save it
-6. Go to **OAuth2** and click bot, than add **Administrator** permissions
-7. You can follow the link that will appear to add the bot to your discord server
+4. Make sure to give the bot indents it needs, this bot requires **server member intent**
+5. Give **Administrator** permission to bot
+6. You will find your bot **TOKEN** there, it is important that you save it
+7. Go to **OAuth2** and click bot, than add **Administrator** permissions
+8. You can follow the link that will appear to add the bot to your discord server
 
 ### Docker
 
