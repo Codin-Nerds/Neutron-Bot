@@ -4,6 +4,7 @@ import textwrap
 from discord import Color, Embed, Guild, Member
 from discord.ext.commands import Cog
 
+from bot.config import Event
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.converters import Ordinal
@@ -32,6 +33,9 @@ class JoinLog(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
+        if self.bot.log_is_ignored(Event.member_join, (member.guild.id, member.id)):
+            return
+
         embed = Embed(
             title="Member joined",
             description=textwrap.dedent(
@@ -51,6 +55,9 @@ class JoinLog(Cog):
 
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
+        if self.bot.log_is_ignored(Event.member_remove, (member.guild.id, member.id)):
+            return
+
         description = (
             f"**Mention:** {member.mention}\n"
             f"**Joined:** {time_elapsed(member.joined_at, max_units=3)}\n"

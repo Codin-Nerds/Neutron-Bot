@@ -8,6 +8,7 @@ from discord.channel import TextChannel
 from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 
+from bot.config import Event
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.audit_parse import last_audit_log_with_fail_embed
@@ -43,6 +44,9 @@ class MemberLog(Cog):
 
     @Cog.listener()
     async def on_member_update(self, member_before: Member, member_after: Member) -> None:
+        if self.bot.log_is_ignored(Event.member_update, (member_after.guild.id, member_after.id)):
+            return
+
         if member_before.status != member_after.status or member_before.activity != member_after.activity:
             # Don't track changes of statuses and activities, they happen very often
             # and it would mean spamming member_log too much, it is usually
@@ -168,6 +172,8 @@ class MemberLog(Cog):
                 member_log_channels.append(member_log_channel)
 
         for member_log_channel in member_log_channels:
+            if self.bot.log_is_ignored(Event.user_update, (member_log_channel.guild.id, user_after.id)):
+                continue
             await member_log_channel.send(embed=embed)
 
 
