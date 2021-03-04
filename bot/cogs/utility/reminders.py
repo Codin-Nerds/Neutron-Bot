@@ -43,7 +43,10 @@ class Reminders(Cog):
         _task_name = f"{ctx.author.id}.{len(self.reminders[ctx.author])}"
         self.timer.delay(duration, _task_name, self._remind(ctx.author, message))
 
-        await ctx.send(f"You'll be reminded in {stringify_duration(duration)}: {message}.")
+        await ctx.send(
+            f"You'll be reminded in {stringify_duration(duration)}: {message} "
+            f"(Reminder ID: {len(self.reminders[ctx.author])})."
+        )
 
     @reminder.command(aliases=["delete", "cancel", "abort"])
     async def remove(self, ctx: Context, reminder_id: int) -> None:
