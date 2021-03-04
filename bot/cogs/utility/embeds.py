@@ -1,14 +1,15 @@
 import json
 import typing as t
 from collections import defaultdict
-from contextlib import suppress
 
-from discord import Embed, Forbidden, Member, TextChannel
+from discord import Embed, Member, TextChannel
 from discord.errors import HTTPException
-from discord.ext.commands import Cog, ColourConverter, Context, MessageConverter, group
+from discord.ext.commands import Cog, Context, group
+from discord.ext.commands.converter import ColourConverter, MessageConverter
+from discord.ext.commands.errors import CheckFailure, MissingPermissions
 
 from bot.core.bot import Bot
-from bot.core.converters import Unicode
+from bot.utils.converters import Unicode
 
 
 class InvalidEmbed(Exception):
@@ -41,19 +42,17 @@ class JsonEmbedParser:
         self.json = JsonEmbedParser.process_dict(json_dict)
 
     @classmethod
-    async def from_str(cls: "JsonEmbedParser", ctx: Context, json_string: str) -> t.Union["JsonEmbedParser", bool]:
+    async def from_str(cls, ctx: Context, json_string: str) -> "JsonEmbedParser":
         """Return class instance from json string.
 
         This will return either class instance (on correct json string),
         or False on incorrect json string.
         """
         json_dict = await cls.parse_json(ctx, json_string)
-        if json_dict is False:
-            return False
         return cls(ctx, json_dict)
 
     @classmethod
-    def from_embed(cls: "JsonEmbedParser", ctx: Context, embed: t.Union[Embed, EmbedData]) -> "JsonEmbedParser":
+    def from_embed(cls, ctx: Context, embed: t.Union[Embed, EmbedData]) -> "JsonEmbedParser":
         """Return class instance from embed."""
         if isinstance(embed, EmbedData):
             embed_dict = embed.embed.to_dict()
@@ -63,7 +62,7 @@ class JsonEmbedParser:
         return cls(ctx, json_dict)
 
     @staticmethod
-    async def parse_json(ctx: Context, json_code: str) -> t.Union[dict, bool]:
+    async def parse_json(ctx: Context, json_code: str) -> dict:
         """Parse given json code."""
         # Sanitize code (remove codeblocks if any)
         if "```" in json_code:
@@ -312,11 +311,8 @@ class Embeds(Cog):
     async def load(self, ctx: Context, *, json_code: str) -> None:
         """Generate Embed from given JSON code."""
         embed_parser = await JsonEmbedParser.from_str(ctx, json_code)
-        if embed_parser is not False:
-            self.embeds[ctx.author] = embed_parser.make_embed()
-            await ctx.send("Embed updated accordingly to provided JSON")
-        else:
-            await ctx.send("Invalid embed JSON")
+        self.embeds[ctx.author] = embed_parser.make_embed()
+        await ctx.send("Embed updated accordingly to provided JSON")
 
     @embed_group.command(aliases=["json_dump", "to_json", "get_json", "export"])
     async def dump(self, ctx: Context) -> None:
@@ -327,16 +323,13 @@ class Embeds(Cog):
 
     @embed_group.command()
     async def message_dump(self, ctx: Context, channel: TextChannel, message_id: int) -> None:
-        """Dump an embed with it's ID."""
+        """Dump JSON of embed in message (by ID)."""
         member = channel.server and channel.server.get_member(ctx.message.author.id)
 
         if channel != ctx.message.channel and not member:
-            await ctx.send("Private Channel, or Invalid Server.")
-            return
+            raise CheckFailure("Channel you're trying to access is private or invalid.")
 
-        with suppress(Forbidden):
-            msg = await self.bot.get_message(channel, str(message_id))
-
+        msg = await self.bot.get_message(channel, str(message_id))
         if msg.author.id != self.bot.user.id:
             await ctx.send("Invalid User's Message.")
             return
@@ -391,13 +384,16 @@ class Embeds(Cog):
     # endregion
 
     def cog_check(self, ctx: Context) -> bool:
-        """Only allow users with manage messages permission to invoke commands in this cog.
+        """
+        Only allow users with manage messages permission to invoke commands in this cog.
 
         This is needed because Embeds can be much longer in comparison to regular messages,
         therefore it would be very easy to spam things and clutter the chat.
         """
-        perms = ctx.author.permissions_in(ctx.channel)
-        return perms.manage_messages
+        if ctx.author.permissions_in(ctx.channel).manage_messages:
+            return True
+
+        return MissingPermissions("Only members with manage messages rights can use this command.")
 
 
 def setup(bot: Bot) -> Bot:

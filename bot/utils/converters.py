@@ -7,11 +7,9 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from discord import Member, User
 from discord.errors import NotFound
-from discord.ext.commands import (
-    BadArgument, Context, Converter,
-    MemberConverter, MemberNotFound,
-    UserConverter, UserNotFound
-)
+from discord.ext.commands import Context
+from discord.ext.commands.converter import Converter, MemberConverter, UserConverter
+from discord.ext.commands.errors import BadArgument, ConversionError, MemberNotFound, UserNotFound
 from loguru import logger
 
 
@@ -156,6 +154,33 @@ class Duration(TimeDelta):
         return diff.total_seconds()
 
 
+class Ordinal(Converter):
+    """Convert integers to ordinal string representation"""
+    @staticmethod
+    def make_ordinal(n: int) -> str:
+        """
+        Convert an integer into its ordinal representation:
+        * make_ordinal(0)   => "0th"
+        * make_ordinal(3)   => "3rd"
+        * make_ordinal(122) => "122nd"
+        * make_ordinal(213) => "213th"
+        """
+        suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
+        if 11 <= (n % 100) <= 13:
+            suffix = "th"
+        return str(n) + suffix
+
+    async def convert(self, ctx: Context, number: str) -> str:
+        if number.isdecimal():
+            return self.make_ordinal(int(number))
+        if number.endswith(("th", "st", "nd", "rd")):
+            # Run conversion here, to prevent user inputted
+            # invalid ordinals, i.e.: 3st
+            if number[:-2].isdecimal():
+                return self.make_ordinal(int(number[:-2]))
+        raise ConversionError(f"{number} is not an ordinal number (`1st`, `2nd`, ...)")
+
+
 class CodeBlock(Converter):
     """
     Convert given wrapped string in codeblock into a tuple of language and the wrapped string
@@ -189,7 +214,7 @@ class CodeBlock(Converter):
         if inline_match:
             return (None, inline_match.group(1))
 
-        return codeblock
+        return (None, codeblock)
 
 
 class ProcessedUser(UserConverter):

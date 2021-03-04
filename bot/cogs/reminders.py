@@ -5,9 +5,9 @@ from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.errors import BadArgument
 
 from bot.core.bot import Bot
-from bot.core.converters import Duration
-from bot.core.timer import Timer
+from bot.utils.converters import Duration
 from bot.utils.time import stringify_duration
+from bot.utils.timer import Timer
 
 
 class Reminders(Cog):

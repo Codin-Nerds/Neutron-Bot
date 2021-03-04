@@ -3,10 +3,10 @@ import typing as t
 from json import JSONDecodeError
 
 from discord import Color, Embed
-from discord.ext.commands import Cog, Context, NotOwner, errors
+from discord.ext.commands import Cog, Context, errors
 from loguru import logger
 
-from bot.cogs.embeds import InvalidEmbed
+from bot.cogs.utility.embeds import InvalidEmbed
 from bot.core.bot import Bot
 
 
@@ -24,7 +24,7 @@ class ErrorHandler(Cog):
         )
         await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
 
-    async def send_unhandled_embed(self, ctx: Context, exception: errors.CommandError) -> None:
+    async def send_unhandled_embed(self, ctx: Context, exception: BaseException) -> None:
         logger.warning(
             f"Exception {exception.__repr__()} has occurred from "
             f"message {ctx.message.content} invoked by {ctx.author.id} on {ctx.guild.id}"
@@ -77,10 +77,10 @@ class ErrorHandler(Cog):
             if isinstance(original_exception, InvalidEmbed):
                 await self.handle_invalid_embed(ctx, original_exception)
                 return
-
-            await self.send_unhandled_embed(ctx, original_exception)
-            # Raise the original exception to show the traceback
-            raise original_exception
+            if original_exception is not None:
+                await self.send_unhandled_embed(ctx, original_exception)
+                # Raise the original exception to show the traceback
+                raise original_exception
             return
 
         await self.send_unhandled_embed(ctx, exception)
@@ -115,7 +115,7 @@ class ErrorHandler(Cog):
         )
 
     async def handle_check_failure(self, ctx: Context, exception: errors.CheckFailure) -> None:
-        if isinstance(exception, NotOwner):
+        if isinstance(exception, errors.NotOwner):
             msg = "❌ This command is only aviable to bot owners."
         else:
             msg = "❌ You don't have permission to run this command."
