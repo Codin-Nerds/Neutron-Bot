@@ -75,10 +75,11 @@ class MessageLog(Cog):
         """
         # Add this message to set of ignored messages for raw events, these trigger even if
         # the message was cached, and to prevent double logging, we need to ignore them
-        self._handled_cached.add((after.guild.id, after.id))
 
         if self.is_ignored(message=after, event=Event.message_edit):
             return
+
+        self._handled_cached.add((after.guild.id, after.id))
 
         response = (
             f"**Author:** {after.author.mention}\n"
