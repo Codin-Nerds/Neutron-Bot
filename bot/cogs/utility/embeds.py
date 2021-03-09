@@ -6,10 +6,11 @@ from discord import Embed, Member, TextChannel
 from discord.errors import HTTPException
 from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.converter import ColourConverter, MessageConverter
-from discord.ext.commands.errors import CheckFailure, MissingPermissions
+from discord.ext.commands.errors import CheckFailure, MissingPermissions, UserInputError
 
 from bot.core.bot import Bot
 from bot.utils.converters import Unicode
+from bot.utils.paste_upload import upload_text
 
 
 class InvalidEmbed(Exception):
@@ -73,12 +74,18 @@ class JsonEmbedParser:
 
         # Parse the code into JSON
         try:
-            return json.loads(json_code)
+            parsed = json.loads(json_code)
         except json.JSONDecodeError as error:
             # Set lines property so that the error handler can
             # show the user line in which the error has occurred
             error.lines = json_code.split("\n")
             raise error
+
+        # json module allows for parsing non-dicts too,
+        # this isn't want we want he, embed will always be in a dict
+        if not isinstance(parsed, dict):
+            raise TypeError("Given code isn't a valid JSON dict.")
+        return parsed
 
     @staticmethod
     def process_dict(json_dct: dict) -> dict:
@@ -301,16 +308,23 @@ class Embeds(Cog):
     # endregion
     # region: json, messageload
 
-    @embed_group.command(name="frommessage", aliases=["loadmessage"])
+    @embed_group.command(name="frommessage", aliases=["loadmessage", "frommsg", "loadmsg"])
     async def from_message(self, ctx: Context, message: MessageConverter) -> None:
-        embed = message.embeds[0]
+        try:
+            embed = message.embeds[0]
+        except IndexError:
+            await ctx.send("Message doesn't contain any embeds")
+            return
         self.embeds[ctx.author] = EmbedData("", embed)
         await ctx.send("Embed loaded from message")
 
     @embed_group.command(aliases=["json_load", "from_json", "json", "import"])
     async def load(self, ctx: Context, *, json_code: str) -> None:
         """Generate Embed from given JSON code."""
-        embed_parser = await JsonEmbedParser.from_str(ctx, json_code)
+        try:
+            embed_parser = await JsonEmbedParser.from_str(ctx, json_code)
+        except TypeError as exc:
+            raise UserInputError(str(exc))
         self.embeds[ctx.author] = embed_parser.make_embed()
         await ctx.send("Embed updated accordingly to provided JSON")
 
@@ -319,6 +333,13 @@ class Embeds(Cog):
         """Export JSON from current Embed."""
         embed_parser = JsonEmbedParser.from_embed(ctx, self.embeds[ctx.author])
         json = embed_parser.make_json()
+        if len(json) > 1800:
+            upload_text(
+                self.bot.http_session, json,
+                file_name="embed_dump.json",
+                paste_description="This paste was automatically generated from contents of an embed."
+            )
+            return
         await ctx.send(f"```json\n{json}```")
 
     @embed_group.command()
