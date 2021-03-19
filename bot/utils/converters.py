@@ -12,6 +12,8 @@ from discord.ext.commands.converter import Converter, MemberConverter, UserConve
 from discord.ext.commands.errors import BadArgument, ConversionError, MemberNotFound, UserNotFound
 from loguru import logger
 
+from bot.core.autoload import EXTENSIONS
+
 
 def _obtain_user_id(argument: str) -> t.Optional[int]:
     """Get user ID from mention or directly from string."""
@@ -215,6 +217,49 @@ class CodeBlock(Converter):
             return (None, inline_match.group(1))
 
         return (None, codeblock)
+
+
+class ValidExtension(Converter):
+    """
+    Convert given extension name to a full qualified path to extension.
+    """
+    @staticmethod
+    def valid_extension_path(extension_name: str) -> str:
+        """
+        Return full qualified path to given extension, if that's
+        not already the case.
+
+        Checks if path includes `bot.cogs`, if not, this adds it.
+        (inverse of `readable_name`)
+        """
+        if not extension_name.startswith("bot.cogs."):
+            if extension_name.startswith("bot."):
+                raise ValueError("This path doesn't point to an extension.")
+
+            extension_name = "bot.cogs." + extension_name
+
+        if extension_name in EXTENSIONS:
+            return extension_name
+
+        extension_parents = {}
+        for extension in EXTENSIONS:
+            while "." in extension:
+                extension_parent = extension.split(".", maxsplit=1)[-1]
+
+                extension_parents.setdefault(extension_parent, [])
+                extension_parents[extension_parent].append(extension)
+
+        if extension_name in extension_parents:
+            return extension_parents[extension_name]
+        else:
+            raise ValueError(f"Extension {extension_name} wasn't found.")
+
+    async def convert(self, ctx: Context, extension_name: str) -> str:
+        """Try to match given `extension_name` to a valid extension within bot project."""
+        try:
+            return self.valid_extension_path(extension_name)
+        except ValueError as exc:
+            raise ConversionError(str(exc))
 
 
 class ProcessedUser(UserConverter):
