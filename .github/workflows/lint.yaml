@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  # Make sure pip caches dependencies and install as user
+  # Make sure pip caches dependencies and installs as user
   PIP_NO_CACHE_DIR: false
   PIP_USER: 1
 
@@ -77,7 +77,8 @@ jobs:
       - name: Run lint check with flake8
         run: "flake8 \
         --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
-        [flake8] %(code)s: %(text)s'"
+        [flake8] %(code)s: %(text)s'\
+        --extend-exclude '.cache'"
 
 
       # Prepare the Pull Request Payload artifact. If this fails, we
