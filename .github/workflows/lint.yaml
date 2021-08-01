@@ -7,18 +7,15 @@ on:
   pull_request:
 
 env:
-  # Make sure pip caches dependencies and installs as user
+  # Make sure pip caches dependencies and install as user
   PIP_NO_CACHE_DIR: false
   PIP_USER: 1
 
-  # Make sure pipenv doesn't use fancy graphics
-  PIPENV_HIDE_EMOJIS: 1
-  PIPENV_NOSPIN: 1
+  # Make sure package manager does not use virtualenv
+  POETRY_VIRTUALENVS_CREATE: false
 
-  # Make sure pipenv does not try reuse an environment it's running in
-  PIPENV_IGNORE_VIRTUALENVS: 1
-
-  # Use direct paths to allow caching
+  # Specify paths here so we know what to cache
+  POETRY_CACHE_DIR: ${{ github.workspace }}/.cache/py-user-base
   PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
   PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
 
@@ -28,84 +25,79 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Add custom PYTHONUSERBASE to PATH
-      run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
+      - name: Add custom PYTHONUSERBASE to PATH
+        run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
 
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
+      - name: Python setup
+        id: python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
 
-    # Cache python dependencies
-    # the key is a composite of multiple values which
-    # when changed, the cache won't be restored
-    # in order to make updating possible
-    - name: Python Dependency Caching
-      uses: actions/cache@v2
-      id: python_cache
-      with:
-        path: ${{ env.PYTHONUSERBASE }}
-        key: "python-0-${{ runner.os }}-${{ env.PYTHONUSERBASE }}-\
-        ${{ steps.python.outputs.python-version }}-\
-        ${{ hashFiles('./Pipfile', './Pipfile.lock') }}"
+      # Cache python dependencies
+      # the key is a composite of multiple values which when changed,
+      # the cache won't be restored in order to make updating possible
+      - name: Python Dependency Caching
+        uses: actions/cache@v2
+        id: python_cache
+        with:
+          path: ${{ env.PYTHONUSERBASE }}
+          key: "python-0-${{ runner.os }}-${{ env.PYTHONUSERBASE }}-\
+          ${{ steps.python.outputs.python-version }}-\
+          ${{ hashFiles('./pyproject.toml', './poetry.lock') }}"
 
-    # In case dependencies weren't restored, install them
-    - name: Install dependencies with pipenv
-      if: steps.python_cache.outputs.cache-hit != 'true'
-      run: |
-        python -m pip install --upgrade pip setuptools wheel pipenv
-        python -m pipenv install --dev --deploy --system
+      # In case dependencies weren't restored, install them
+      - name: Install dependencies using poetry
+        if: steps.python_cache.outputs.cache-hit != 'true'
+        run: |
+          pip install poetry
+          poetry install
 
-    # Cache pre-commit environment
-    # the key consists relevant factors to allow
-    # updating, when pre-commit changes
-    - name: Pre-commit Environment Caching
-      uses: actions/cache@v2
-      with:
-        path: ${{ env.PRE_COMMIT_HOME }}
-        key: "precommit-0-${{ runner.os }}-${{ env.PRE_COMMIT_HOME }}-\
-        ${{ steps.python.outputs.python-version }}-\
-        ${{ hashFiles('./.pre-commit-config.yaml') }}"
+      # Cache pre-commit environment
+      # the key consists relevant factors to allow updating, when pre-commit changes
+      - name: Pre-commit Environment Caching
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.PRE_COMMIT_HOME }}
+          key: "precommit-0-${{ runner.os }}-${{ env.PRE_COMMIT_HOME }}-\
+          ${{ steps.python.outputs.python-version }}-\
+          ${{ hashFiles('./.pre-commit-config.yaml') }}"
 
-    # Skip flake8 since it will have it's own section
-    # make a user install for pre-commit by using
-    # PIP_USER=0
-    - name: Run pre-commit hooks
-      run: |
-        export PIP_USER=0; SKIP=flake8 pre-commit run --all-files
+      # Skip flake8 since it will have it's own section
+      # make a user install for pre-commit by using PIP_USER=0
+      - name: Run pre-commit hooks
+        run: export PIP_USER=0; SKIP=flake8 pre-commit run --all-files
 
-    # Run flake8 formatting checks for general code style (lint) check
-    # ignore `.cache` directory during this check, it is where the pipenv
-    # stores the venv and where other caching details live, we don't want to scan it
-    # Error format:
-    # ::error file={filename},line={line},col={col}::{message}
-    - name: Run flake8
-      run: "flake8 \
+      # Run flake8 formatting checks for general code style (lint) check
+      # Error format:
+      # ::error file={filename},line={line},col={col}::{message}
+      - name: Run lint check with flake8
+        run: "flake8 \
         --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
-        [flake8] %(code)s: %(text)s' \
-        --extend-exclude '.cache'"
+        [flake8] %(code)s: %(text)s'"
 
-    # Prepare the Pull Request Payload artifact. If this fails, we
-    # we fail silently using the `continue-on-error` option. It's
-    # nice if this succeeds, but if it fails for any reason, it
-    # does not mean that our lint-test checks failed.
-    - name: Prepare Pull Request Payload artifact
-      id: prepare-artifact
-      if: always() && github.event_name == 'pull_request'
-      continue-on-error: true
-      run: cat $GITHUB_EVENT_PATH | jq '.pull_request' > pull_request_payload.json
 
-    # This only makes sense if the previous step succeeded. To
-    # get the original outcome of the previous step before the
-    # `continue-on-error` conclusion is applied, we use the
-    # `.outcome` value. This step also fails silently.
-    - name: Upload a Build Artifact
-      if: always() && steps.prepare-artifact.outcome == 'success'
-      continue-on-error: true
-      uses: actions/upload-artifact@v2
-      with:
-        name: pull-request-payload
-        path: pull_request_payload.json
+      # Prepare the Pull Request Payload artifact. If this fails, we
+      # we fail silently using the `continue-on-error` option. It's
+      # nice if this succeeds, but if it fails for any reason, it
+      # does not mean that our lint-test checks failed.
+      - name: Prepare Pull Request Payload artifact
+        id: prepare-artifact
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: cat $GITHUB_EVENT_PATH | jq '.pull_request' > pull_request_payload.json
+
+      # This only makes sense if the previous step succeeded. To
+      # get the original outcome of the previous step before the
+      # `continue-on-error` conclusion is applied, we use the
+      # `.outcome` value. This step also fails silently.
+      - name: Upload a Build Artifact
+        if: always() && steps.prepare-artifact.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@v2
+        with:
+          name: pull-request-payload
+          path: pull_request_payload.json
