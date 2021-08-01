@@ -1,6 +1,6 @@
 # Contributing
 
-This project is fully open-sourced and will be automatically deployed whenever commits are pushed to `master` branch, so these are the guidelines to keep everything clean and in working order.
+This project is fully open-sourced and will be automatically deployed whenever commits are pushed to `main` branch, so these are the guidelines to keep everything clean and in working order.
 
 Note that contributions may be rejected on the basis of a contributor failing to follow these guidelines
 
@@ -12,7 +12,7 @@ In the interest of fostering an open and welcoming environment, we as contributo
 
 1. **No force-pushes** or modifying the Git history in any way.
 2. If you have direct access to the repository **Create a branch for your changes** and create a pull request for that branch. If not, create a branch on a for of the repository and create a pull request from there.
-   * It's common practice for repository to reject direct pushes to `master`, so make branching a habit!
+   * It's common practice for repository to reject direct pushes to `main`, so make branching a habit!
    * If PRing from your own fork, **ensure that "Allow edits from maintainers" is checked**. This gives permission for maintainers to commit changes directly to your fork, speeding up the review process.
 3. **Adhere to the prevailing code style** which we enforce using [`flake8`](https://flake8.pycqa.org/en/latest/index.html) and [`pre-commit`](https://pre-commit.com/).
    * Run `flake8` and `pre-commit` against your code before you push it.
@@ -22,7 +22,7 @@ In the interest of fostering an open and welcoming environment, we as contributo
     * Avoid making minor commits for fixing typos or linting errors. Since you've already set up a `pre-commit` hook to run the linting pipeline before a commit, you shouldn't be commiting linting issues anyway.
     * A more in-depth guide to writing great commit messages can be found in Chris Beam's [*How to Write a Git Commit Message*](https://chris.beams.io/posts/git-commit/)
 5. **Avoid frequent pushes to the main repository**. This goes for PRs opened against your fork as well. Try to batch your commits until you've finished working for that session, or you've reached a point where collaborators need your commits to continue their own work. This also provides you the opportunity to ammend commits for minor changes rather than having to commit them on their own because you've already pushed.
-    * This includes merging master into your branch. Try to leave merging from master for after your PR passes review: a maintainer will bring your PR up to date before merging. Exceptions to this include: resolving merge conflicts, needing something that was pushed to master for your branch, or something was pushed to master that could potentially affect the functionality of what you're doing
+    * This includes merging main into your branch. Try to leave merging from main for after your PR passes review: a maintainer will bring your PR up to date before merging. Exceptions to this include: resolving merge conflicts, needing something that was pushed to main for your branch, or something was pushed to main that could potentially affect the functionality of what you're doing
 6. **Don't fight the framework**. Every framework has its laws, but the frameworks we've picked out have been carefully chosen for their particular merits. If you can avoid it, please resist reimplementing swathes or framework logic - the work has already been done for you!
 7. If someone is working on an issue or pull request. **do not open your own pull request for the same task**. Instead, collaborate with the author(s) of the existing pull request. Duplicate PRs opened without communicating with the other author(s) and/or repository authors will be closed. Communication is key, and there's no point in two separate implementations of the same thing.
     * One option is to fork the other contributor's repository and submit your changes to their branch with your own pull request. We suggest following these guidelines when interacting with their repository as well.
@@ -158,4 +158,4 @@ All projects evolve over time, and this contribution guide is no different. This
 
 ## Footnotes
 
-This document was inspired by [Contributor Covenant 1.4](https://www.contributor-covenant.org/version/1/4/code-of-conduct/) and [PyDis team](https://github.com/python-discord/bot/blob/master/CONTRIBUTING.md)
+This document was inspired by [Contributor Covenant 1.4](https://www.contributor-covenant.org/version/1/4/code-of-conduct/) and [PyDis team](https://github.com/python-discord/bot/blob/main/CONTRIBUTING.md)
