@@ -1,32 +1,22 @@
-FROM python:3.8-slim
+FROM python:3.9.5-slim
 
-# Define Git SHA build argument
-ARG git_sha="development"
 
-# Set pip to have cleaner logs and no saved cache
+# Set pip to have no saved cache
 ENV PIP_NO_CACHE_DIR=false \
-    PIPENV_HIDE_EMOJIS=1 \
-    PIPENV_IGNORE_VIRTUALENVS=1 \
-    PIPENV_NOSPIN=1 \
-    GIT_SHA=$git_sha
+    POETRY_VIRTUALENVS_CREATE=false
 
-RUN apt-get -y update \
-    && apt-get install -y \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install pipenv
-RUN pip install -U pipenv
+# Install poetry
+RUN pip install -U poetry
 
 # Create the working directory
 WORKDIR /bot
 
 # Install project dependencies
-COPY Pipfile* ./
-RUN pipenv install --system --deploy
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-dev
 
 # Copy the source code in last to optimize rebuilding the image
 COPY . .
 
-ENTRYPOINT ["pipenv"]
-CMD ["run", "start"]
+ENTRYPOINT ["python3"]
+CMD ["-m", "bot"]
