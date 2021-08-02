@@ -3,7 +3,7 @@ import textwrap
 import typing as t
 from functools import partial
 
-from discord import Color, Embed, Guild, Member, User
+from discord import AuditLogEntry, Color, Embed, Guild, Member, User
 from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 
@@ -17,7 +17,7 @@ from bot.utils.audit_parse import last_audit_log_with_fail_embed
 class ModLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.audit_cache = set()
+        self.audit_cache: t.Set[AuditLogEntry] = set()
 
     async def send_log(self, guild: Guild, *send_args, **send_kwargs) -> bool:
         """

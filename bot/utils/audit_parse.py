@@ -11,7 +11,7 @@ async def last_audit_log(
     actions: t.Iterable[AuditLogAction],
     target: t.Any = None,
     max_time: int = 5,
-    audit_cache: t.Optional[t.Set[int]] = None,
+    audit_cache: t.Optional[t.Set[AuditLogEntry]] = None,
 ) -> t.Optional[AuditLogEntry]:
     """
     This function can be used, to obtain last audit entry for given `actions`
@@ -29,9 +29,6 @@ async def last_audit_log(
 
     If an entry was found, `AuditLogEntry` is returned, otherwise, we return `None`.
     If bot doesn't have permission to access audit log, `Forbidden` exception is raised.
-
-    NOTE: Currently `audit_cache` is a set of AuditLogEntry IDs, because entries aren't hashable
-    This will be changing in discord.py 1.7, and this should be updated once 1.7 is released.
     """
     found_logs = []
     for action in actions:
@@ -46,7 +43,7 @@ async def last_audit_log(
         return
 
     # Get latest log from extracted ones
-    last_log = max(found_logs, key=lambda log_entry: log_entry.created_at)
+    last_log: AuditLogEntry = max(found_logs, key=lambda log_entry: log_entry.created_at)
 
     # Make sure to only go through audit logs within 5 seconds,
     # if this log is older, ignore it
@@ -65,12 +62,12 @@ async def last_audit_log(
     # audit log entry twice, to prevent this, we keep a cache of times audit
     # log entries were created, and if they match, they're the same entry
     if audit_cache is not None:
-        if last_log.id not in audit_cache:
+        if last_log not in audit_cache:
             return
 
         # if this wasn't the case, the entry is valid, and we should update the cache
         # with the new processed entry time
-        audit_cache.add(last_log.id)
+        audit_cache.add(last_log)
 
     return last_log
 
@@ -81,7 +78,7 @@ async def last_audit_log_with_fail_embed(
     send_callback: t.Awaitable,
     target: t.Any = None,
     max_time: int = 5,
-    audit_cache: t.Set[int] = None,
+    audit_cache: t.Set[AuditLogEntry] = None,
 ) -> t.Optional[AuditLogEntry]:
     """
     This functions extends functionality of `last_audit_log` from `bot.utils.audit_parse`.
