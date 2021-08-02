@@ -287,13 +287,13 @@ class ProcessedUser(UserConverter):
             return await super().convert(ctx, argument)
 
         # Try to look user up using API
-        ID = _obtain_user_id(argument)
-        if ID is None:
+        user_id = _obtain_user_id(argument)
+        if user_id is None:
             raise UserNotFound(f"No user found from `{argument}`")
         try:
-            return await ctx.bot.fetch_user(ID)
+            return await ctx.bot.fetch_user(user_id)
         except NotFound:
-            raise UserNotFound(f"No user with ID: {ID} found")
+            raise UserNotFound(f"No user with ID: {user_id} found")
 
 
 class ProcessedMember(MemberConverter):
@@ -316,10 +316,10 @@ class ProcessedMember(MemberConverter):
             return await super().convert(ctx, argument)
 
         # Try to look user up using API
-        ID = _obtain_user_id(argument)
-        if ID is None:
+        user_id = _obtain_user_id(argument)
+        if user_id is None:
             raise MemberNotFound(f"No member found on guild {ctx.guild.id} from `{argument}`")
         try:
-            return await ctx.guild.fetch_member(ID)
+            return await ctx.guild.fetch_member(user_id)
         except NotFound:
-            raise MemberNotFound(f"No member with ID: {ID} found on guild {ctx.guild.id}")
+            raise MemberNotFound(f"No member with ID: {user_id} found on guild {ctx.guild.id}")
