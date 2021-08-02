@@ -11,6 +11,9 @@ from discord.permissions import Permissions
 from bot.utils.time import stringify_duration
 
 
+# Define functions to be used for some specific attributes of given object classes (keys)
+# in order to improve readability, if an attribute shouldn't be shown at all in the diff,
+# use {class: {'attribute_name': None}}
 format_mapping = {
     TextChannel: {
         "slowmode_delay": lambda time: stringify_duration(time) if time != 0 else 'Off'
