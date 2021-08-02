@@ -10,6 +10,7 @@ python = "^3.9"
 loguru = "^0.5.3"
 python-dateutil = "^2.8.2"
 "discord.py" = "^1.7.3"
+discord-ext-menus = { git = "https://github.com/Rapptz/discord-ext-menus", branch = "master" }
 asyncpg = "^0.23.0"
 SQLAlchemy = "^1.4.22"
 aiohttp = "^3.7.4"
