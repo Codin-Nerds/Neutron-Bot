@@ -25,7 +25,7 @@ def walk_modules(package: ModuleType, check: t.Optional[FunctionType] = None) ->
     """Yield extension names from the bot.cogs subpackage."""
 
     def on_error(name: str) -> t.NoReturn:
-        raise ImportError(name=name)  # pragma: no cover
+        raise ImportError(name=name)
 
     for module in pkgutil.walk_packages(package.__path__, f"{package.__name__}.", onerror=on_error):
         if bare_name(module.name).startswith("_"):
