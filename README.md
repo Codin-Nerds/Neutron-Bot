@@ -50,11 +50,11 @@ After you made a database and a user with some password for it. You can tell the
 #### Starting the bot
 
 1. Clone the repository (or fork it if you want to make changes)
-2. Install **pipenv** `pip install pipenv`
-3. Build the virtual enviroment from Pipfile.lock `pipenv sync`
+2. Install [**poetry**](https://python-poetry.org/) `pip install poetry`
+3. Build the virtual enviroment from poetry.lock `poetry install`
 4. Create `.env` file for your environmental variables with:
    * `BOT_TOKEN=[Your bot token]`, this is tells the bot how to connect to your discord application
    * `COMMAND_PREFIX=[Your prefix]`, this is optional and will default to `>>`, if you want different prefix, change this
    * Rest of the postgresql config, as shown in the postgresql section
 5. Configure the settings (More about this in **Settings** section)
-6. Run the bot `pipenv run start`
+6. Run the bot `poetry run task start`

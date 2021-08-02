@@ -18,7 +18,7 @@ repos:
       - id: flake8
         name: Flake8
         description: Run flake8 checks on the code
-        entry: pipenv run flake8
+        entry: poetry run flake8
         language: python
         types: [python]
         require_serial: true
