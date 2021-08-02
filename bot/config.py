@@ -4,7 +4,9 @@ from enum import Enum
 
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ">>")
 
-DEV_MODE = True
+# Debug/Development mode
+# If not defined or defined as false, set to False, otherwise, set to True
+DEV_MODE = "DEV_MODE" in os.environ and os.environ["DEV_MODE"].lower() != "false"
 
 # Aviable types of strikes
 STRIKE_TYPES = [
