@@ -226,33 +226,39 @@ class ValidExtension(Converter):
     @staticmethod
     def valid_extension_path(extension_name: str) -> str:
         """
-        Return full qualified path to given extension, if that's
-        not already the case.
+        If given `extension_name` can be used to point to a single
+        valid extension, return the full qualified path to it.
 
-        Checks if path includes `bot.cogs`, if not, this adds it.
-        (inverse of `readable_name`)
+        `extension_name` can be a full qualified path ('bot.cogs.core.sudo'),
+        or a unique suffix of a full qualified path (i.e. 'cogs.core.sudo',
+        or 'core.sudo', or 'sudo'), as long as it only matches with single
+        full qualified extension path, this path will be returned.
+
+        If the extension_name can't uniquely point to a single full qualified
+        path, raise ValueError
         """
-        if not extension_name.startswith("bot.cogs."):
-            if extension_name.startswith("bot."):
-                raise ValueError("This path doesn't point to an extension.")
+        extension_name = extension_name.removeprefix("bot.cogs.")
+        extension_name = extension_name.removeprefix("cogs.")
+        if extension_name.startswith("bot."):
+            raise ValueError("This path doesn't point to an extension.")
 
-            extension_name = "bot.cogs." + extension_name
+        # Check if full extension path matches
+        if f"bot.cogs.{extension_name}" in EXTENSIONS:
+            return f"bot.cogs.{extension_name}"
 
-        if extension_name in EXTENSIONS:
-            return extension_name
-
-        extension_parents = {}
+        # Check if extension_name is a child name, if it is and it's
+        # unique to only one parent module, return that extension
+        # (i.e. if extension_name='sudo', there's only 1 such child cog name
+        # and that is within bot.cogs.core.sudo, so we can return it)
+        possible_extensions = []
         for extension in EXTENSIONS:
-            while "." in extension:
-                extension_parent = extension.split(".", maxsplit=1)[-1]
+            if extension.endswith(extension_name):
+                possible_extensions.append(extension)
 
-                extension_parents.setdefault(extension_parent, [])
-                extension_parents[extension_parent].append(extension)
+        if len(possible_extensions) == 1:
+            return possible_extensions[0]
 
-        if extension_name in extension_parents:
-            return extension_parents[extension_name]
-        else:
-            raise ValueError(f"Extension {extension_name} wasn't found.")
+        raise ValueError(f"Extension {extension_name} wasn't found.")
 
     async def convert(self, ctx: Context, extension_name: str) -> str:
         """Try to match given `extension_name` to a valid extension within bot project."""
