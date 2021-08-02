@@ -8,6 +8,9 @@ ENV PIP_NO_CACHE_DIR=false \
 # Install poetry
 RUN pip install -U poetry
 
+# Install git for discord-ext-menus dependency
+RUN apt update && apt install git -y
+
 # Create the working directory
 WORKDIR /bot
 
