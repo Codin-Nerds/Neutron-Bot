@@ -2,6 +2,7 @@ import os
 from enum import Enum
 
 
+TOKEN = os.getenv("BOT_TOKEN")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ">>")
 
 # Debug/Development mode
