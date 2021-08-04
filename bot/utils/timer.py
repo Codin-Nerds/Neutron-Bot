@@ -97,7 +97,7 @@ class Timer:
                 logger.debug(f"Aborting the coroutine from {self.id}:{task_name} task.")
                 coro.close()
 
-    def _task_executed(self, task_name: t.Hashable, executed_task: t.Coroutine) -> None:
+    def _task_executed(self, task_name: t.Hashable, executed_task: asyncio.Task) -> None:
         """
         Remove the task from `delayed_tasks` dict once it was executed.
 
