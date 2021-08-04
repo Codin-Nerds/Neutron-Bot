@@ -4,7 +4,7 @@ from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.errors import BadArgument, MissingPermissions
 from sqlalchemy.exc import NoResultFound
 
-from bot.config import STRIKE_TYPES
+from bot.config import StrikeType
 from bot.core.bot import Bot
 from bot.database.strikes import Strikes as StrikesDB
 from bot.utils.converters import ProcessedUser
@@ -37,11 +37,13 @@ class Strikes(Cog):
     @strike_group.command(aliases=["create"])
     async def add(self, ctx: Context, user: ProcessedUser, strike_type: str, *, reason: t.Optional[str] = None) -> None:
         """Add a new strike to given `user`"""
-        if strike_type not in STRIKE_TYPES:
-            raise BadArgument(f"Invalid strike type, possible types are: `{', '.join(STRIKE_TYPES)}`")
+        if strike_type in StrikeType.__members__:
+            strike_type = StrikeType.__members__[strike_type]
+        else:
+            raise BadArgument(f"No such strike type ({strike_type})")
 
         strike_id = await StrikesDB.set_strike(self.bot.db_engine, ctx.guild, user, ctx.author, strike_type, reason)
-        await ctx.send(f"✅ {strike_type} strike (ID: `{strike_id}`) applied to {user.mention}, reason: `{reason}`")
+        await ctx.send(f"✅ {strike_type.value} strike (ID: `{strike_id}`) applied to {user.mention}, reason: `{reason}`")
 
     @strike_group.command(aliases=["del"])
     async def remove(self, ctx: Context, strike_id: int) -> None:

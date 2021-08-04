@@ -7,6 +7,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from bot.database import Base, get_str_guild, get_str_user, upsert
+from bot.config import StrikeType
 
 
 class StrikeIndex(Base):
@@ -48,7 +49,7 @@ class Strikes(Base):
         guild: t.Union[str, int, Guild],
         author: t.Union[str, int, Member],
         user: t.Union[str, int, Member, User],
-        strike_type: str,
+        strike_type: StrikeType,
         reason: t.Optional[str],
         strike_id: t.Optional[int] = None
     ) -> int:
@@ -64,7 +65,7 @@ class Strikes(Base):
         if not strike_id:
             strike_id = await StrikeIndex.get_id(session, guild)
 
-        logger.debug(f"Adding {strike_type} strike to {user} from {author} for {reason}: id: {strike_id}")
+        logger.debug(f"Adding {strike_type.value} strike to {user} from {author} for {reason}: id: {strike_id}")
 
         await upsert(
             session, cls,
@@ -74,7 +75,7 @@ class Strikes(Base):
                 "id": strike_id,
                 "author": author,
                 "user": user,
-                "type": strike_type,
+                "type": strike_type.value,
                 "reason": reason
             }
         )
