@@ -77,7 +77,7 @@ class Strikes(Base):
         if not strike_id:
             strike_id = await StrikeIndex.get_id(engine, guild)
 
-        logger.debug(f"Adding {strike_type.value} strike to {user} from {author} for {reason}: id: {strike_id}")
+        logger.debug(f"Adding {strike_type.value} strike to {user} from {author} for '{reason}' strike id: {strike_id}")
 
         await upsert(
             session, cls,
