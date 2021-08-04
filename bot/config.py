@@ -6,8 +6,7 @@ COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ">>")
 
 # Debug/Development mode
 # If not defined or defined as false, set to False, otherwise, set to True
-DEV_MODE = "DEV_MODE" in os.environ and os.environ["DEV_MODE"].lower() != "false"
-
+DEBUG = "DEBUG" in os.environ and os.environ["DEBUG"].lower() != "false"
 
 # Database
 DATABASE = {

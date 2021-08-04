@@ -2,11 +2,11 @@ import sys
 
 from loguru import logger
 
-from bot.config import DEV_MODE
+from bot.config import DEBUG
 
 log_file = "logs/bot.log"
 log_format = "<green>{time:YYYY-MM-DD hh:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name: <18}</cyan> | <level>{message}</level>"
-log_level = "TRACE" if DEV_MODE else "INFO"
+log_level = "TRACE" if DEBUG else "INFO"
 
 logger.configure(
     handlers=[
