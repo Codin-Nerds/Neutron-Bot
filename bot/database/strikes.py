@@ -103,10 +103,11 @@ class Strikes(Base):
 
         row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, id=strike_id).one())
         dct = row.to_dict()
-        await session.run_sync(lambda session: session.delete(row))
+        await session.delete(row)
+        await session.commit()
         await session.close()
 
-        logger.debug(f"Strike {strike_id} has been removed")
+        logger.debug(f"Strike {strike_id} has been removed on guild {guild}")
 
         return dct
 
