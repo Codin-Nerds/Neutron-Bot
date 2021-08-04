@@ -6,11 +6,15 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from bot.database import Base, get_str_guild, get_str_user, upsert
 from bot.config import StrikeType
+from bot.database import Base, get_str_guild, get_str_user, upsert
 
 
 class StrikeIndex(Base):
+    """
+    Keep track of which strike ID should be used next for specific a guild,
+    this is needed to keep strike IDs in proper order.
+    """
     __tablename__ = "strike_index"
 
     guild = Column(String, primary_key=True, nullable=False)
@@ -23,12 +27,20 @@ class StrikeIndex(Base):
 
         # Logic for increasing strike ID if it was already found
         # but using the default if the entry is new
-        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
-        next_id = row.next_id + 1
-        row.next_id = next_id
-        await session.commit()
-        await session.close()
-        return next_id
+        try:
+            row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
+        except NoResultFound:
+            # This is a new guild, make a new row entry for it
+            new_row = cls(guild=guild, next_id=0)
+            session.add(new_row)
+            return new_row.next_id  # this will always be 0
+        else:
+            next_id = row.next_id + 1
+            row.next_id = next_id
+            return next_id
+        finally:
+            await session.commit()
+            await session.close()
 
 
 class Strikes(Base):
@@ -63,7 +75,7 @@ class Strikes(Base):
         # which ID should be used from the index table to keep the strikes serial
         # with their specific guild, if strike is specified, it means we're updating
         if not strike_id:
-            strike_id = await StrikeIndex.get_id(session, guild)
+            strike_id = await StrikeIndex.get_id(engine, guild)
 
         logger.debug(f"Adding {strike_type.value} strike to {user} from {author} for {reason}: id: {strike_id}")
 
