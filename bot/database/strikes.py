@@ -148,7 +148,7 @@ class Strikes(Base):
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, id=strike_id).one())
         except NoResultFound:
             dct = {col: None for col in cls.__table__.columns.keys()}
-            dct.update({'guild': guild, 'id': strike_id})
+            dct.update(guild=guild, id=strike_id)
             return dct
         else:
             return row.to_dict()

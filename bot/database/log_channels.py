@@ -69,7 +69,7 @@ class LogChannels(Base):
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
         except NoResultFound:
             dct = {col: None for col in cls.__table__.columns.keys()}
-            dct.update({'guild': guild})
+            dct.update(guild=guild)
             return dct
         else:
             return row.to_dict()

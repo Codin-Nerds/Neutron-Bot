@@ -87,7 +87,7 @@ class Permissions(Base):
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, role=role).one())
         except NoResultFound:
             dct = {col: None for col in cls.__table__.columns.keys()}
-            dct.update({'guild': guild, 'role': role})
+            dct.update(guild=guild, role=role)
             return dct
         else:
             return row.to_dict()
@@ -137,7 +137,7 @@ class Permissions(Base):
             # to handle for that
             if member.guild_permissions.administrator:
                 dct = {col: float("inf") for col in cls.__table__.columns.keys()}
-                dct.update({'guild': guild})
+                dct.update(guild=guild)
                 return dct
 
             # Follow the hierarchy from most important role to everyone
@@ -149,7 +149,7 @@ class Permissions(Base):
                 for key, value in dct:
                     if value is not None:
                         dct[key] = perms[key]
-            dct.update({'guild': guild})
+            dct.update(guild=guild)
             return dct
 
     @classmethod
