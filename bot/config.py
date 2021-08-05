@@ -32,6 +32,16 @@ class StrikeType(Enum):
     automod_note = "automod_note"
 
 
+class LogChannelType(Enum):
+    """List all available types of log channels."""
+    server_log = "server_log"
+    mod_log = "mod_log"
+    message_log = "message_log"
+    member_log = "member_log"
+    voice_log = "voice_log"
+    join_log = "join_log"
+
+
 class Event(Enum):
     """
     Used to identify specific event for bot.cogs.logging.mod_log.

@@ -4,7 +4,7 @@ import textwrap
 from discord import Color, Embed, Guild, Member
 from discord.ext.commands import Cog
 
-from bot.config import Event
+from bot.config import Event, LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.converters import Ordinal
@@ -23,7 +23,7 @@ class JoinLog(Cog):
         If the message was sent, return True, otherwise return False
         (might happen if join_log channel isn't defined in database).
         """
-        join_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "join_log", guild)
+        join_log_id = await LogChannels.get_log_channel(self.bot.db_engine, LogChannelType.join_log, guild)
         join_log_channel = guild.get_channel(int(join_log_id))
         if join_log_channel is None:
             return False

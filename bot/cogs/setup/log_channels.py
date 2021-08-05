@@ -5,6 +5,7 @@ from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import MissingPermissions
 
+from bot.config import LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 
@@ -14,13 +15,9 @@ class LogChannelsSetup(Cog):
         self.bot = bot
 
     @group(invoke_without_command=True, aliases=["logging", "log", "logs", "logchannel"])
-    async def logging_group(self, ctx: Context, log_type: str, channel: TextChannelConverter) -> None:
+    async def logging_group(self, ctx: Context, log_type: LogChannelType, channel: TextChannelConverter) -> None:
         """Commands for configuring the log channels."""
-        try:
-            await LogChannels.set_log_channel(self.bot.db_engine, log_type, ctx.guild, channel)
-        except ValueError:
-            await ctx.send(f":x: Invalid logging type, types: `{', '.join(LogChannels.valid_log_types)}`")
-            return
+        await LogChannels.set_log_channel(self.bot.db_engine, log_type, ctx.guild, channel)
         await ctx.send(":white_check_mark: Log channel updated")
 
     @logging_group.command(aliases=["info", "status"])
@@ -29,7 +26,7 @@ class LogChannelsSetup(Cog):
         obtained_channels = await LogChannels.get_log_channels(self.bot.db_engine, ctx.guild)
 
         description_lines = []
-        for log_type in LogChannels.valid_log_types:
+        for log_type in LogChannelType.__members__:
             channel_id = obtained_channels.get(log_type, None)
             channel = ctx.guild.get_channel(int(channel_id))
 

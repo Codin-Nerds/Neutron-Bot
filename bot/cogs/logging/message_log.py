@@ -8,7 +8,7 @@ from discord.errors import NotFound
 from discord.ext.commands import Cog
 from discord.raw_models import RawMessageDeleteEvent, RawMessageUpdateEvent
 
-from bot.config import Event
+from bot.config import Event, LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.paste_upload import upload_files, upload_text
@@ -53,7 +53,7 @@ class MessageLog(Cog):
         If the message was sent, return True, otherwise return False
         (might happen if message_log channel isn't defined in database).
         """
-        message_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "message_log", guild)
+        message_log_id = await LogChannels.get_log_channel(self.bot.db_engine, LogChannelType.message_log, guild)
         message_log_channel = guild.get_channel(int(message_log_id))
         if message_log_channel is None:
             return False
