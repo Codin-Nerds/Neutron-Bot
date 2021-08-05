@@ -5,9 +5,9 @@ from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import MissingPermissions
 
-from bot.utils.converters import LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
+from bot.utils.converters import LogChannelType
 
 
 class LogChannelsSetup(Cog):
