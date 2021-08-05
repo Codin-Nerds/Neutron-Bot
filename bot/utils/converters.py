@@ -291,22 +291,16 @@ class ProcessedMember(MemberConverter):
 
 class LogChannelType(Converter):
     """Convert string log_type into a valid LogChannelTypeEnum."""
-    def convert(self, ctx: Context, log_type: str) -> t.Optional[LogChannelTypeEnum]:
+    async def convert(self, ctx: Context, log_type: str) -> LogChannelTypeEnum:
         """
         Try to find a valid LogChannelTypeEnum for given `log_type`,
         if the `log_type` doesn't end with "_log", append it.
-
-        If `log_type` is "None", return None to represent no selected channel.
         """
         if not log_type.endswith("_log"):
             log_type += "_log"
 
         if log_type in LogChannelTypeEnum.__members__:
             return LogChannelTypeEnum.__members__[log_type]
-
-        # We
-        if log_type.lower() == "none":
-            return None
 
         raise ConversionError(f"No such LogChannelType: {log_type}, valid types: {', '.join(LogChannelTypeEnum.__members__)}")
 

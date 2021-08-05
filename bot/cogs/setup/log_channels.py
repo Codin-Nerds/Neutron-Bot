@@ -5,7 +5,7 @@ from discord.ext.commands import Cog, Context, group
 from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import MissingPermissions
 
-from bot.config import LogChannelType
+from bot.utils.converters import LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 
@@ -26,10 +26,11 @@ class LogChannelsSetup(Cog):
         obtained_channels = await LogChannels.get_log_channels(self.bot.db_engine, ctx.guild)
 
         description_lines = []
-        for log_type in LogChannelType.__members__:
-            channel_id = obtained_channels.get(log_type, None)
-            channel = ctx.guild.get_channel(int(channel_id))
-
+        for key, value in obtained_channels.items():
+            if key == "guild":
+                continue
+            channel = ctx.guild.get_channel(int(value)) if value is not None else None
+            log_type = key.value
             readable_log_type = log_type.replace("_log", "").capitalize()
             description_lines.append(f"{readable_log_type} level logs: {channel.mention if channel else '<not configured>'}")
 
