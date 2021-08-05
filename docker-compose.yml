@@ -27,6 +27,7 @@ services:
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       COMMAND_PREFIX: ${COMMAND_PREFIX}
+      DEBUG: ${DEBUG}
       DATABASE_HOST: postgres:5432
       DATABASE_NAME: bot
       DATABASE_USER: bot

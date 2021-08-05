@@ -9,11 +9,9 @@ from discord.ext.commands import AutoShardedBot as Base_Bot
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from bot import config
-from bot.config import Event
-from bot.core.autoload import EXTENSIONS, readable_name
-from bot.database import Base as DbBase
-from bot.database import load_tables
+import bot.config
+import bot.database
+from bot.core import autoload
 
 
 class Bot(Base_Bot):
@@ -29,12 +27,12 @@ class Bot(Base_Bot):
 
     async def load_extensions(self) -> None:
         """Load all listed cogs."""
-        for extension in EXTENSIONS:
+        for extension in autoload.EXTENSIONS:
             try:
                 self.load_extension(extension)
-                logger.debug(f"Cog {readable_name(extension)} loaded.")
+                logger.debug(f"Cog {autoload.readable_name(extension)} loaded.")
             except Exception as e:
-                logger.error(f"Cog {readable_name(extension)} failed to load with {type(e)}: {e}")
+                logger.error(f"Cog {autoload.readable_name(extension)} failed to load with {type(e)}: {e}")
 
     async def db_connect(self) -> AsyncEngine:
         """
@@ -48,12 +46,12 @@ class Bot(Base_Bot):
         the same session isn't thread-safe and when multiple calls happen concurrently,
         it causes issues that asyncpg can't handle.
         """
-        load_tables()  # Load all DB Tables, in order to bring them into the metadata of DbBase
+        bot.database.load_tables()  # Load all DB Tables, in order to bring them into the metadata of DbBase
 
-        engine = create_async_engine(config.DATABASE_ENGINE_STRING)
+        engine = create_async_engine(bot.config.DATABASE_ENGINE_STRING)
         try:
             async with engine.begin() as conn:
-                await conn.run_sync(DbBase.metadata.create_all)  # Create all database tables from found models
+                await conn.run_sync(bot.database.Base.metadata.create_all)  # Create all database tables from found models
         except ConnectionRefusedError:
             # Keep recursively trying to connect to the database
             logger.error("Unable to connect to database, retrying in 5s")
@@ -103,7 +101,7 @@ class Bot(Base_Bot):
             await self.http_session.close()
         await super().close()
 
-    def log_ignore(self, event: Event, *items: t.Any) -> None:
+    def log_ignore(self, event: bot.config.Event, *items: t.Any) -> None:
         """
         Add event to the set of ignored events to abort log sending.
 
@@ -120,7 +118,7 @@ class Bot(Base_Bot):
             if item not in self._ignored_logs[event]:
                 self._ignored_logs[event].add(item)
 
-    def log_is_ignored(self, event: Event, key: t.Any, remove: bool = True) -> bool:
+    def log_is_ignored(self, event: bot.config.Event, key: t.Any, remove: bool = True) -> bool:
         """
         Check if given event with uniquely identifiable `key` is present in
         the ignore set, if it is, return `True`, otherwise return `False`.

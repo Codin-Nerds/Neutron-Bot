@@ -6,10 +6,15 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from bot.config import StrikeType
 from bot.database import Base, get_str_guild, get_str_user, upsert
 
 
 class StrikeIndex(Base):
+    """
+    Keep track of which strike ID should be used next for specific a guild,
+    this is needed to keep strike IDs in proper order.
+    """
     __tablename__ = "strike_index"
 
     guild = Column(String, primary_key=True, nullable=False)
@@ -22,12 +27,20 @@ class StrikeIndex(Base):
 
         # Logic for increasing strike ID if it was already found
         # but using the default if the entry is new
-        row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
-        next_id = row.next_id + 1
-        row.next_id = next_id
-        await session.commit()
-        await session.close()
-        return next_id
+        try:
+            row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild).one())
+        except NoResultFound:
+            # This is a new guild, make a new row entry for it
+            new_row = cls(guild=guild, next_id=0)
+            session.add(new_row)
+            return new_row.next_id  # this will always be 0
+        else:
+            next_id = row.next_id + 1
+            row.next_id = next_id
+            return next_id
+        finally:
+            await session.commit()
+            await session.close()
 
 
 class Strikes(Base):
@@ -48,7 +61,7 @@ class Strikes(Base):
         guild: t.Union[str, int, Guild],
         author: t.Union[str, int, Member],
         user: t.Union[str, int, Member, User],
-        strike_type: str,
+        strike_type: StrikeType,
         reason: t.Optional[str],
         strike_id: t.Optional[int] = None
     ) -> int:
@@ -62,9 +75,9 @@ class Strikes(Base):
         # which ID should be used from the index table to keep the strikes serial
         # with their specific guild, if strike is specified, it means we're updating
         if not strike_id:
-            strike_id = await StrikeIndex.get_id(session, guild)
+            strike_id = await StrikeIndex.get_id(engine, guild)
 
-        logger.debug(f"Adding {strike_type} strike to {user} from {author} for {reason}: id: {strike_id}")
+        logger.debug(f"Adding {strike_type.value} strike to {user} from {author} for '{reason}' strike id: {strike_id}")
 
         await upsert(
             session, cls,
@@ -74,7 +87,7 @@ class Strikes(Base):
                 "id": strike_id,
                 "author": author,
                 "user": user,
-                "type": strike_type,
+                "type": strike_type.value,
                 "reason": reason
             }
         )
@@ -90,10 +103,11 @@ class Strikes(Base):
 
         row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, id=strike_id).one())
         dct = row.to_dict()
-        await session.run_sync(lambda session: session.delete(row))
+        await session.delete(row)
+        await session.commit()
         await session.close()
 
-        logger.debug(f"Strike {strike_id} has been removed")
+        logger.debug(f"Strike {strike_id} has been removed on guild {guild}")
 
         return dct
 
@@ -148,7 +162,7 @@ class Strikes(Base):
             row = await session.run_sync(lambda session: session.query(cls).filter_by(guild=guild, id=strike_id).one())
         except NoResultFound:
             dct = {col: None for col in cls.__table__.columns.keys()}
-            dct.update({'guild': guild, 'id': strike_id})
+            dct.update(guild=guild, id=strike_id)
             return dct
         else:
             return row.to_dict()

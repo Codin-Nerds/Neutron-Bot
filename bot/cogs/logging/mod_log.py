@@ -3,11 +3,11 @@ import textwrap
 import typing as t
 from functools import partial
 
-from discord import Color, Embed, Guild, Member, User
+from discord import AuditLogEntry, Color, Embed, Guild, Member, User
 from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 
-from bot.config import Event
+from bot.config import Event, LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.database.roles import Roles
@@ -17,7 +17,7 @@ from bot.utils.audit_parse import last_audit_log_with_fail_embed
 class ModLog(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.audit_cache = set()
+        self.audit_cache: t.Set[AuditLogEntry] = set()
 
     async def send_log(self, guild: Guild, *send_args, **send_kwargs) -> bool:
         """
@@ -27,7 +27,7 @@ class ModLog(Cog):
         If the message was sent, return True, otherwise return False
         (might happen if mod_log channel isn't defined in database).
         """
-        mod_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "mod_log", guild)
+        mod_log_id = await LogChannels.get_log_channel(self.bot.db_engine, LogChannelType.mod_log, guild)
         mod_log_channel = guild.get_channel(int(mod_log_id))
         if mod_log_channel is None:
             return False

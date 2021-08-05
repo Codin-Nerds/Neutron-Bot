@@ -7,6 +7,7 @@ from discord.channel import CategoryChannel, VoiceChannel
 from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 
+from bot.config import LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.audit_parse import last_audit_log_with_fail_embed
@@ -25,10 +26,10 @@ class ServerLog(Cog):
         If the message was sent, return True, otherwise return False
         (might happen if server_log channel isn't defined in database).
         """
-        server_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "server_log", guild)
-        server_log_channel = guild.get_channel(int(server_log_id))
-        if server_log_channel is None:
+        server_log_id = await LogChannels.get_log_channel(self.bot.db_engine, LogChannelType.server_log, guild)
+        if server_log_id is None:
             return False
+        server_log_channel = guild.get_channel(int(server_log_id))
 
         await server_log_channel.send(*send_args, **send_kwargs)
         return True

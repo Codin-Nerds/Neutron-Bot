@@ -1,6 +1,7 @@
 from discord import Color, Embed, Guild, Member, VoiceState
 from discord.ext.commands import Cog
 
+from bot.config import LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 
@@ -17,7 +18,7 @@ class MessageLog(Cog):
         If the message was sent, return True, otherwise return False
         (might happen if voice_log channel isn't defined in database).
         """
-        voice_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "voice_log", guild)
+        voice_log_id = await LogChannels.get_log_channel(self.bot.db_engine, LogChannelType.voice_log, guild)
         voice_log_channel = guild.get_channel(int(voice_log_id))
         if voice_log_channel is None:
             return False

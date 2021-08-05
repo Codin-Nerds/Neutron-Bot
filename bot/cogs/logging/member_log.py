@@ -8,7 +8,7 @@ from discord.channel import TextChannel
 from discord.enums import AuditLogAction
 from discord.ext.commands import Cog
 
-from bot.config import Event
+from bot.config import Event, LogChannelType
 from bot.core.bot import Bot
 from bot.database.log_channels import LogChannels
 from bot.utils.audit_parse import last_audit_log_with_fail_embed
@@ -23,7 +23,7 @@ class MemberLog(Cog):
         Try to obtain the proper channel for given guild, if the channel is
         found, return it, otherwise, return `None`.
         """
-        member_log_id = await LogChannels.get_log_channel(self.bot.db_engine, "member_log", guild)
+        member_log_id = await LogChannels.get_log_channel(self.bot.db_engine, LogChannelType.member_log, guild)
         return guild.get_channel(int(member_log_id))
 
     async def send_log(self, guild: Guild, *send_args, **send_kwargs) -> bool:

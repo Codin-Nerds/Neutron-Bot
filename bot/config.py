@@ -2,15 +2,12 @@ import os
 from enum import Enum
 
 
+TOKEN = os.getenv("BOT_TOKEN")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", ">>")
 
-DEV_MODE = True
-
-# Aviable types of strikes
-STRIKE_TYPES = [
-    "ban", "kick", "mute", "note", "custom",
-    "automod-ban", "automod-kick", "automod-mute", "automod-note",
-]
+# Debug/Development mode
+# If not defined or defined as false, set to False, otherwise, set to True
+DEBUG = "DEBUG" in os.environ and os.environ["DEBUG"].lower() != "false"
 
 # Database
 DATABASE = {
@@ -22,11 +19,34 @@ DATABASE = {
 DATABASE_ENGINE_STRING = f"postgresql+asyncpg://{DATABASE['user']}:{DATABASE['password']}@{DATABASE['host']}/{DATABASE['database']}"
 
 
+class StrikeType(Enum):
+    """Lists all available types for a strike."""
+    ban = "ban"
+    kick = "kick"
+    mute = "mute"
+    note = "note"
+    custom = "custom"
+    automod_ban = "automod_ban"
+    automod_kick = "automod_kick"
+    automod_mute = "automod_mute"
+    automod_note = "automod_note"
+
+
+class LogChannelType(Enum):
+    """List all available types of log channels."""
+    server_log = "server_log"
+    mod_log = "mod_log"
+    message_log = "message_log"
+    member_log = "member_log"
+    voice_log = "voice_log"
+    join_log = "join_log"
+
+
 class Event(Enum):
     """
     Used to identify specific event for bot.cogs.logging.mod_log.
     This isn't in sync with all discord.py real events, it is here
-    to hold a unique identifier for each event
+    to hold a unique identifier for each event.
     """
     member_ban = "member_ban"
     member_unban = "member_unban"
