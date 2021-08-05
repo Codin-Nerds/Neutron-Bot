@@ -13,6 +13,7 @@ from discord.ext.commands.errors import BadArgument, ConversionError, MemberNotF
 from loguru import logger
 
 from bot.config import LogChannelType as LogChannelTypeEnum
+from bot.config import StrikeType as StrikeTypeEnum
 from bot.core.autoload import EXTENSIONS
 
 
@@ -346,3 +347,14 @@ class LogChannelType(Converter):
             return None
 
         raise ConversionError(f"No such LogChannelType: {log_type}, valid types: {', '.join(LogChannelTypeEnum.__members__)}")
+
+
+class StrikeType(Converter):
+    """Convert string strike_type into a valid StrikeTypeEnum."""
+
+    def convert(self, ctx: Context, strike_type: str) -> StrikeTypeEnum:
+        """Find a matching `StrikeTypeEnum` for given `strike_type`"""
+        if strike_type in StrikeTypeEnum.__members__:
+            return StrikeTypeEnum.__members__[strike_type]
+
+        raise ConversionError(f"No such LogChannelType: {strike_type}, valid types: {', '.join(StrikeTypeEnum.__members__)}")

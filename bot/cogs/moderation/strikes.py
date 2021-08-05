@@ -1,13 +1,12 @@
 import typing as t
 
 from discord.ext.commands import Cog, Context, group
-from discord.ext.commands.errors import BadArgument, MissingPermissions
+from discord.ext.commands.errors import MissingPermissions
 from sqlalchemy.exc import NoResultFound
 
-from bot.config import StrikeType
 from bot.core.bot import Bot
 from bot.database.strikes import Strikes as StrikesDB
-from bot.utils.converters import ProcessedUser
+from bot.utils.converters import ProcessedUser, StrikeType
 
 
 class Strikes(Cog):
@@ -35,13 +34,8 @@ class Strikes(Cog):
         await ctx.send_help(ctx.command)
 
     @strike_group.command(aliases=["create"])
-    async def add(self, ctx: Context, user: ProcessedUser, strike_type: str, *, reason: t.Optional[str] = None) -> None:
+    async def add(self, ctx: Context, user: ProcessedUser, strike_type: StrikeType, *, reason: t.Optional[str] = None) -> None:
         """Add a new strike to given `user`"""
-        if strike_type in StrikeType.__members__:
-            strike_type = StrikeType.__members__[strike_type]
-        else:
-            raise BadArgument(f"No such strike type ({strike_type})")
-
         strike_id = await StrikesDB.set_strike(self.bot.db_engine, ctx.guild, user, ctx.author, strike_type, reason)
         await ctx.send(f"✅ {strike_type.value} strike (ID: `{strike_id}`) applied to {user.mention}, reason: `{reason}`")
 
