@@ -29,6 +29,8 @@ def _obtain_user_id(argument: str) -> t.Optional[int]:
     elif id_match is not None:
         return int(id_match.group(1))
 
+# region: Textual converters
+
 
 class ActionReason(Converter):
     """Make sure reason length is within 512 characters."""
@@ -90,6 +92,72 @@ class Unicode(Converter):
             lambda x: self.outside_delimeter(x, "`", self.process_unicode),
         )
 
+
+class Ordinal(Converter):
+    """Convert integers to ordinal string representation"""
+    @staticmethod
+    def make_ordinal(n: int) -> str:
+        """
+        Convert an integer into its ordinal representation:
+        * make_ordinal(0)   => "0th"
+        * make_ordinal(3)   => "3rd"
+        * make_ordinal(122) => "122nd"
+        * make_ordinal(213) => "213th"
+        """
+        suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
+        if 11 <= (n % 100) <= 13:
+            suffix = "th"
+        return str(n) + suffix
+
+    async def convert(self, ctx: Context, number: str) -> str:
+        if number.isdecimal():
+            return self.make_ordinal(int(number))
+        if number.endswith(("th", "st", "nd", "rd")):
+            # Run conversion here, to prevent user inputted
+            # invalid ordinals, i.e.: 3st
+            if number[:-2].isdecimal():
+                return self.make_ordinal(int(number[:-2]))
+        raise ConversionError(f"{number} is not an ordinal number (`1st`, `2nd`, ...)")
+
+
+class CodeBlock(Converter):
+    """
+    Convert given wrapped string in codeblock into a tuple of language and the wrapped string
+    """
+
+    codeblock_parser = re.compile(r"\`\`\`(.*\n)?((?:[^\`]*\n*)+)\`\`\`")
+    inline_code_parser = re.compile(r"\`(.*\n*)\`")
+
+    async def convert(self, ctx: Context, codeblock: str) -> t.Tuple[t.Optional[str], str]:
+        """
+        Convert a string `codeblock` into a tuple which consists of:
+        * language (f.e.: `py` or `None` for no language)
+        * wrapped_text (the text inside of the codeblock)
+        The converter converts:
+        * full codeblocks (```text```, ```py\ntext```, ```\ntext```)
+        * inline codeblocks (`text`)
+        In case no codeblock was found, original string is returned
+        """
+        codeblock_match = self.codeblock_parser.fullmatch(codeblock)
+        if codeblock_match:
+            lang = codeblock_match.group(1)
+            code = codeblock_match.group(2)
+            if not code:
+                code = lang
+                lang = None
+            if code[-1] == "\n":
+                code = code[:-1]
+            return (lang, code)
+
+        inline_match = self.inline_code_parser.fullmatch(codeblock)
+        if inline_match:
+            return (None, inline_match.group(1))
+
+        return (None, codeblock)
+
+
+# endregion
+# region: Time converters
 
 class TimeDelta(Converter):
     """Convert given duration string into relativedelta."""
@@ -157,117 +225,8 @@ class Duration(TimeDelta):
 
         return diff.total_seconds()
 
-
-class Ordinal(Converter):
-    """Convert integers to ordinal string representation"""
-    @staticmethod
-    def make_ordinal(n: int) -> str:
-        """
-        Convert an integer into its ordinal representation:
-        * make_ordinal(0)   => "0th"
-        * make_ordinal(3)   => "3rd"
-        * make_ordinal(122) => "122nd"
-        * make_ordinal(213) => "213th"
-        """
-        suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
-        if 11 <= (n % 100) <= 13:
-            suffix = "th"
-        return str(n) + suffix
-
-    async def convert(self, ctx: Context, number: str) -> str:
-        if number.isdecimal():
-            return self.make_ordinal(int(number))
-        if number.endswith(("th", "st", "nd", "rd")):
-            # Run conversion here, to prevent user inputted
-            # invalid ordinals, i.e.: 3st
-            if number[:-2].isdecimal():
-                return self.make_ordinal(int(number[:-2]))
-        raise ConversionError(f"{number} is not an ordinal number (`1st`, `2nd`, ...)")
-
-
-class CodeBlock(Converter):
-    """
-    Convert given wrapped string in codeblock into a tuple of language and the wrapped string
-    """
-
-    codeblock_parser = re.compile(r"\`\`\`(.*\n)?((?:[^\`]*\n*)+)\`\`\`")
-    inline_code_parser = re.compile(r"\`(.*\n*)\`")
-
-    async def convert(self, ctx: Context, codeblock: str) -> t.Tuple[t.Optional[str], str]:
-        """
-        Convert a string `codeblock` into a tuple which consists of:
-        * language (f.e.: `py` or `None` for no language)
-        * wrapped_text (the text inside of the codeblock)
-        The converter converts:
-        * full codeblocks (```text```, ```py\ntext```, ```\ntext```)
-        * inline codeblocks (`text`)
-        In case no codeblock was found, original string is returned
-        """
-        codeblock_match = self.codeblock_parser.fullmatch(codeblock)
-        if codeblock_match:
-            lang = codeblock_match.group(1)
-            code = codeblock_match.group(2)
-            if not code:
-                code = lang
-                lang = None
-            if code[-1] == "\n":
-                code = code[:-1]
-            return (lang, code)
-
-        inline_match = self.inline_code_parser.fullmatch(codeblock)
-        if inline_match:
-            return (None, inline_match.group(1))
-
-        return (None, codeblock)
-
-
-class ValidExtension(Converter):
-    """
-    Convert given extension name to a full qualified path to extension.
-    """
-    @staticmethod
-    def valid_extension_path(extension_name: str) -> str:
-        """
-        If given `extension_name` can be used to point to a single
-        valid extension, return the full qualified path to it.
-
-        `extension_name` can be a full qualified path ('bot.cogs.core.sudo'),
-        or a unique suffix of a full qualified path (i.e. 'cogs.core.sudo',
-        or 'core.sudo', or 'sudo'), as long as it only matches with single
-        full qualified extension path, this path will be returned.
-
-        If the extension_name can't uniquely point to a single full qualified
-        path, raise ValueError
-        """
-        extension_name = extension_name.removeprefix("bot.cogs.")
-        extension_name = extension_name.removeprefix("cogs.")
-        if extension_name.startswith("bot."):
-            raise ValueError("This path doesn't point to an extension.")
-
-        # Check if full extension path matches
-        if f"bot.cogs.{extension_name}" in EXTENSIONS:
-            return f"bot.cogs.{extension_name}"
-
-        # Check if extension_name is a child name, if it is and it's
-        # unique to only one parent module, return that extension
-        # (i.e. if extension_name='sudo', there's only 1 such child cog name
-        # and that is within bot.cogs.core.sudo, so we can return it)
-        possible_extensions = []
-        for extension in EXTENSIONS:
-            if extension.endswith(extension_name):
-                possible_extensions.append(extension)
-
-        if len(possible_extensions) == 1:
-            return possible_extensions[0]
-
-        raise ValueError(f"Extension {extension_name} wasn't found.")
-
-    async def convert(self, ctx: Context, extension_name: str) -> str:
-        """Try to match given `extension_name` to a valid extension within bot project."""
-        try:
-            return self.valid_extension_path(extension_name)
-        except ValueError as exc:
-            raise ConversionError(str(exc))
+# endregion
+# region: User converters
 
 
 class ProcessedUser(UserConverter):
@@ -327,6 +286,9 @@ class ProcessedMember(MemberConverter):
             raise MemberNotFound(f"No member with ID: {user_id} found on guild {ctx.guild.id}")
 
 
+# endregion
+# region: String to Enum converters
+
 class LogChannelType(Converter):
     """Convert string log_type into a valid LogChannelTypeEnum."""
     def convert(self, ctx: Context, log_type: str) -> t.Optional[LogChannelTypeEnum]:
@@ -358,3 +320,58 @@ class StrikeType(Converter):
             return StrikeTypeEnum.__members__[strike_type]
 
         raise ConversionError(f"No such LogChannelType: {strike_type}, valid types: {', '.join(StrikeTypeEnum.__members__)}")
+
+# endregion
+# region: Others
+
+
+class ValidExtension(Converter):
+    """
+    Convert given extension name to a full qualified path to extension.
+    """
+    @staticmethod
+    def valid_extension_path(extension_name: str) -> str:
+        """
+        If given `extension_name` can be used to point to a single
+        valid extension, return the full qualified path to it.
+
+        `extension_name` can be a full qualified path ('bot.cogs.core.sudo'),
+        or a unique suffix of a full qualified path (i.e. 'cogs.core.sudo',
+        or 'core.sudo', or 'sudo'), as long as it only matches with single
+        full qualified extension path, this path will be returned.
+
+        If the extension_name can't uniquely point to a single full qualified
+        path, raise ValueError
+        """
+        extension_name = extension_name.removeprefix("bot.cogs.")
+        extension_name = extension_name.removeprefix("cogs.")
+        if extension_name.startswith("bot."):
+            raise ValueError("This path doesn't point to an extension.")
+
+        # Check if full extension path matches
+        if f"bot.cogs.{extension_name}" in EXTENSIONS:
+            return f"bot.cogs.{extension_name}"
+
+        # Check if extension_name is a child name, if it is and it's
+        # unique to only one parent module, return that extension
+        # (i.e. if extension_name='sudo', there's only 1 such child cog name
+        # and that is within bot.cogs.core.sudo, so we can return it)
+        possible_extensions = []
+        for extension in EXTENSIONS:
+            if extension.endswith(extension_name):
+                possible_extensions.append(extension)
+
+        if len(possible_extensions) == 1:
+            return possible_extensions[0]
+
+        raise ValueError(f"Extension {extension_name} wasn't found.")
+
+    async def convert(self, ctx: Context, extension_name: str) -> str:
+        """Try to match given `extension_name` to a valid extension within bot project."""
+        try:
+            return self.valid_extension_path(extension_name)
+        except ValueError as exc:
+            raise ConversionError(str(exc))
+
+
+# endregion
