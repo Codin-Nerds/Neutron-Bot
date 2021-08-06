@@ -451,6 +451,7 @@ webhook_instance = discord.Webhook(
 class MockWebhook(CustomMockMixin, unittest.mock.Mock):
     """A class for creating mocked `discord.Webhook` objects."""
     spec_set = webhook_instance
+    spec_asyncs_extend = ("send", "edit", "delete", "execute")
 
     def __init__(self, **kwargs):
         new_kwargs = {
