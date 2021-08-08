@@ -25,6 +25,12 @@ class Bot(Base_Bot):
         self.initial_call = True
         self._ignored_logs = defaultdict(set)
 
+        # These attributes will be set later, once the bot starts up
+        # they can't be set here, because they need asyncio's event loop
+        # however we still want to define them here to provide type hints
+        self.http_session: t.Optional[aiohttp.ClientSession] = None
+        self.db_engine: t.Optional[AsyncEngine] = None
+
     async def load_extensions(self) -> None:
         """Load all listed cogs."""
         for extension in autoload.EXTENSIONS:
