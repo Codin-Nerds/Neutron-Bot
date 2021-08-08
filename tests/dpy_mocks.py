@@ -7,6 +7,7 @@ import unittest.mock
 
 import discord
 import discord.ext.commands
+import discord.mixins
 from aiohttp import ClientSession
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -122,7 +123,7 @@ guild_data = {
 guild_instance = discord.Guild(data=guild_data, state=mock_state)
 
 
-class MockGuild(CustomMockMixin, unittest.mock.Mock):
+class MockGuild(CustomMockMixin, unittest.mock.Mock, discord.mixins.Hashable):
     """A class for creating mocked `discord.Guild` objects."""
     spec_set = guild_instance
 
@@ -143,7 +144,7 @@ role_data = {"id": 734712951637934093, "name": "Admin"}
 role_instance = discord.Role(guild=guild_instance, state=mock_state, data=role_data)
 
 
-class MockRole(CustomMockMixin, unittest.mock.Mock, ColorMixin):
+class MockRole(CustomMockMixin, unittest.mock.Mock, ColorMixin, discord.mixins.Hashable):
     """A class for creating mocked `discord.Role` objects."""
     spec_set = role_instance
 
@@ -186,7 +187,7 @@ user_data = {
 user_instance = discord.User(data=user_data, state=mock_state)
 
 
-class MockUser(CustomMockMixin, unittest.mock.Mock, ColorMixin):
+class MockUser(CustomMockMixin, unittest.mock.Mock, ColorMixin, discord.mixins.Hashable):
     """A class for creating mocked `discord.User` objects."""
     spec_set = user_instance
 
@@ -207,7 +208,7 @@ member_data = {"user": "ItsDrike", "roles": [1]}
 member_instance = discord.Member(data=member_data, guild=guild_instance, state=mock_state)
 
 
-class MockMember(CustomMockMixin, unittest.mock.Mock, ColorMixin):
+class MockMember(CustomMockMixin, unittest.mock.Mock, ColorMixin, discord.mixins.Hashable):
     """A class for creating mocked `discord.Member` objects."""
     spec_set = member_instance
 
@@ -246,7 +247,7 @@ text_channel_data = {
 text_channel_instance = discord.TextChannel(data=text_channel_data, guild=guild_instance, state=mock_state)
 
 
-class MockTextChannel(CustomMockMixin, unittest.mock.Mock):
+class MockTextChannel(CustomMockMixin, unittest.mock.Mock, discord.mixins.Hashable):
     """A class for creating mocked `discord.TextChannel` objects."""
     spec_set = text_channel_instance
 
@@ -291,7 +292,7 @@ voice_channel_data = {
 voice_channel_instance = discord.VoiceChannel(data=voice_channel_data, guild=guild_instance, state=mock_state)
 
 
-class MockVoiceChannel(CustomMockMixin, unittest.mock.Mock):
+class MockVoiceChannel(CustomMockMixin, unittest.mock.Mock, discord.mixins.Hashable):
     """A class for creating mocked `discord.VoiceChannel` objects."""
     spec_set = voice_channel_instance
 
@@ -316,7 +317,7 @@ category_channel_data = {
 category_channel_instance = discord.CategoryChannel(data=category_channel_data, guild=guild_instance, state=mock_state)
 
 
-class MockCategoryChannel(CustomMockMixin, unittest.mock.Mock):
+class MockCategoryChannel(CustomMockMixin, unittest.mock.Mock, discord.mixins.Hashable):
     """A class for creating mocked `discord.CategoryChannel` objects."""
     spec_set = category_channel_instance
 
@@ -334,7 +335,7 @@ dm_channel_data = {"id": 1, "recipients": [user_instance]}
 dm_channel_instance = discord.DMChannel(me=user_instance, data=dm_channel_data, state=mock_state)
 
 
-class MockDMChannel(CustomMockMixin, unittest.mock.Mock):
+class MockDMChannel(CustomMockMixin, unittest.mock.Mock, discord.mixins.Hashable):
     """A class for creating mocked `discord.DMChannel` objects."""
     spec_set = dm_channel_instance
 
