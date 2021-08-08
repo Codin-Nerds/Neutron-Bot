@@ -33,11 +33,8 @@ class SlowmodeCogTests(unittest.TestCase):
         self.cog = Slowmode(self.bot)
         self.context = MockContext()
 
-    def test_slowmode_change_sends_message(self):
-        """
-        Make sure that when the slow_mode command is ran properly, it sends
-        the message we expect to the channel.
-        """
+    def test_slowmode_sends_message(self):
+        """Ensure that slow_mode command sends the expected message to the affected channel."""
         # Define new slowmode delay time that should be set for our text channel
         time = 10  # seconds
 
@@ -126,10 +123,7 @@ class SlowmodeCogTests(unittest.IsolatedAsyncioTestCase):
         self.context = MockContext()
 
     async def test_slowmode_change_sends_message(self):
-        """
-        Make sure that when the slow_mode command is ran properly, it sends
-        the message we expect to the channel.
-        """
+        """Ensure that slow_mode command sends the expected message to the affected channel."""
         time = 10  # seconds
 
         text_channel = MockTextChannel(name="my-channel", slowmode_delay=1)
