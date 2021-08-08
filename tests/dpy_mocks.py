@@ -177,6 +177,32 @@ class MockRole(CustomMockMixin, unittest.mock.Mock, ColorMixin):
         return self.position >= other.position
 
 
+user_data = {
+    "id": 306876636526280705,
+    "username": "ItsDrike",
+    "discriminator": 5359,
+    "avatar": "avatar.png"
+}
+user_instance = discord.User(data=user_data, state=mock_state)
+
+
+class MockUser(CustomMockMixin, unittest.mock.Mock, ColorMixin):
+    """A class for creating mocked `discord.User` objects."""
+    spec_set = user_instance
+
+    def __init__(self, **kwargs):
+        new_kwargs = {
+            "id": next(self.discord_id),
+            "name": "MockUser",
+            "bot": False
+        }
+        new_kwargs.update(kwargs)
+
+        if "mention" not in new_kwargs:
+            new_kwargs["mention"] = f"&{new_kwargs['name']}"
+        super().__init__(**new_kwargs)
+
+
 member_data = {"user": "ItsDrike", "roles": [1]}
 member_instance = discord.Member(data=member_data, guild=guild_instance, state=mock_state)
 
@@ -203,32 +229,6 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColorMixin):
         if roles:
             new_kwargs["roles"].extend(roles)
 
-        super().__init__(**new_kwargs)
-
-
-user_data = {
-    "id": 306876636526280705,
-    "username": "ItsDrike",
-    "discriminator": 5359,
-    "avatar": "avatar.png"
-}
-user_instance = discord.User(data=user_data, state=mock_state)
-
-
-class MockUser(CustomMockMixin, unittest.mock.Mock, ColorMixin):
-    """A class for creating mocked `discord.User` objects."""
-    spec_set = user_instance
-
-    def __init__(self, **kwargs):
-        new_kwargs = {
-            "id": next(self.discord_id),
-            "name": "MockUser",
-            "bot": False
-        }
-        new_kwargs.update(kwargs)
-
-        if "mention" not in new_kwargs:
-            new_kwargs["mention"] = f"&{new_kwargs['name']}"
         super().__init__(**new_kwargs)
 
 
