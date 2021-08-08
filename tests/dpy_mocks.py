@@ -250,7 +250,7 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock):
     """A class for creating mocked `discord.TextChannel` objects."""
     spec_set = text_channel_instance
 
-    def __init__(self, **kwargs):
+    def __init__(self, overwrites: t.Dict[t.Union[discord.Role, discord.Member], discord.PermissionOverwrite], **kwargs):
         new_kwargs = {
             "id": next(self.discord_id),
             "name": "MockedTextChannel",
@@ -259,6 +259,11 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock):
         new_kwargs.update(kwargs)
         if "mention" not in new_kwargs:
             new_kwargs["mention"] = f"&{new_kwargs['name']}"
+
+        # Handle overwrites separately
+        new_kwargs["overwrites"] = {MockRole(name="@everyone", position=1, id=0): discord.PermissionOverwrite()}
+        if overwrites:
+            new_kwargs["overwrites"].update(overwrites)
 
         super().__init__(**new_kwargs)
 
