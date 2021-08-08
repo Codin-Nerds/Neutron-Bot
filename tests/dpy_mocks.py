@@ -261,6 +261,19 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock):
 
         super().__init__(**new_kwargs)
 
+    async def edit(self, **kwargs) -> None:
+        """
+        Mimic the `discord.TextChannel.edit` method which makes a discord API call and
+        changes certain attributes of a text channel to only change the attributes,
+        without making the actual API calls.
+
+        Note: This will fail if we attempt to edit a non-existent attributes, as this mock
+        only supports attribute definitions for attributes that are also present in the
+        spec_set model.
+        """
+        for arg, value in kwargs.items():
+            setattr(self, arg, value)
+
 
 voice_channel_data = {
     "id": 734712952342577192,
