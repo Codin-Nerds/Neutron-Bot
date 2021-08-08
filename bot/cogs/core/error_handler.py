@@ -134,7 +134,7 @@ class ErrorHandler(Cog):
             The error occurred on *`line {exception.lineno} column {exception.colno} (char {exception.pos})`*
             """
         )
-        if hasattr(exception, "lines") and len(exception.lines) > exception.lineno - 1:
+        if hasattr(exception, "lines") and len(exception.lines) >= exception.lineno:
             msg += textwrap.dedent(
                 f"""
                 ```
