@@ -3,7 +3,7 @@ import unittest
 from discord import Permissions
 
 from bot.cogs.automod.filepaste import FilePaste
-from tests.dpy_mocks import MockBot, MockMember, MockMessage, MockAttachment
+from tests.dpy_mocks import MockAttachment, MockBot, MockMember, MockMessage
 
 
 async def fake_upload_attachments(*a, **kw) -> str:
