@@ -1,9 +1,10 @@
 import unittest
 
-from discord.ext.commands.errors import BadArgument
+from discord import Permissions
+from discord.ext.commands.errors import BadArgument, MissingPermissions
 
 from bot.cogs.moderation.slowmode import Slowmode
-from tests.dpy_mocks import MockBot, MockContext, MockTextChannel
+from tests.dpy_mocks import MockBot, MockContext, MockMember, MockTextChannel
 
 
 class SlowmodeCogTests(unittest.IsolatedAsyncioTestCase):
@@ -31,3 +32,20 @@ class SlowmodeCogTests(unittest.IsolatedAsyncioTestCase):
         new_time = 6 * 60 * 60 + 1  # 6 hours (in seconds) + 1
         with self.assertRaises(BadArgument):
             await self.cog.slow_mode(self.cog, self.context, new_time)
+
+    async def test_cog_check(self):
+        """Only members with manage_messages permissions should be allowed to use this cog."""
+        authorized_member = MockMember()
+        authorized_member.permissions_in.return_value = Permissions(manage_channels=True)
+        unauthorized_member = MockMember()
+        unauthorized_member.permissions_in.return_value = Permissions(manage_channels=False)
+
+        with self.subTest(test_member=authorized_member, msg="Test cog_check on authorized member"):
+            self.context.author = authorized_member
+            result = await self.cog.cog_check(self.context)
+            self.assertEqual(result, True)
+
+        with self.subTest(test_member=unauthorized_member, msg="Test cog_check on unauthorized member"):
+            self.context.author = unauthorized_member
+            with self.assertRaises(MissingPermissions):
+                await self.cog.cog_check(self.context)
