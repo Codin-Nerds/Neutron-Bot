@@ -2,7 +2,7 @@ import unittest
 import unittest.mock
 from json.decoder import JSONDecodeError
 
-from discord.ext.commands.errors import CheckFailure, UserInputError, CommandInvokeError
+from discord.ext.commands.errors import CheckFailure, CommandInvokeError, UserInputError
 
 from bot.cogs.core.error_handler import ErrorHandler
 from bot.cogs.utility.embeds import InvalidEmbed
