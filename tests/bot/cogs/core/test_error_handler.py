@@ -18,6 +18,21 @@ class ErrorHandlerCogTests(unittest.IsolatedAsyncioTestCase):
         # Avoid problems with `ctx.command.aliases` not being iterable
         self.context.command.aliases = []
 
+    async def test_send_error_embed(self):
+        """Test that _send_error_embed does actually send an embed message."""
+        await self.cog._send_error_embed(self.context, "title", "description")
+        self.context.send.assert_awaited_once()
+
+    async def test_send_unhandled_embed(self):
+        """TRest that send_unhandled_embed calls lower level _send_error_embed function."""
+        # Replace the actual _send_error_embed with an AsyncMock, so that we can make sure that
+        # it was actually ran, also running the actual _send_error_embed function would be out
+        # of scope for this specific test
+        _send_error_embed = unittest.mock.AsyncMock()
+        with unittest.mock.patch("bot.cogs.core.error_handler.ErrorHandler._send_error_embed", _send_error_embed):
+            await self.cog.send_unhandled_embed(self.context, Exception())
+            _send_error_embed.assert_awaited_once()
+
     async def test_proper_handler_used(self):
         """Make sure that on_command_errors uses the correct handlers for given exception types."""
         # Define some exception that would clutter the test_cases  here as simple variables
