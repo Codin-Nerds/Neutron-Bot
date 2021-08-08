@@ -1,4 +1,4 @@
-name: Lint
+name: Validation
 
 on:
   push:
@@ -20,8 +20,8 @@ env:
   PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
 
 jobs:
-  lint:
-    name: Lint
+  validate:
+    name: Validation
     runs-on: ubuntu-latest
 
     steps:
@@ -80,6 +80,8 @@ jobs:
         [flake8] %(code)s: %(text)s' \
         --extend-exclude '.cache'"
 
+      - name: Run tests and generate coverage report
+        run: pytest --cov --disable-warnings -q
 
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's
