@@ -3,7 +3,7 @@ import unittest
 from discord import Permissions
 
 from bot.cogs.automod.filepaste import FilePaste
-from tests.dpy_mocks import MockAttachment, MockBot, MockMember, MockMessage
+from tests.dpy_mocks import MockAttachment, MockBot, MockMember, MockMessage, MockUser
 
 
 async def fake_upload_attachments(*a, **kw) -> str:
@@ -22,6 +22,35 @@ class FilePasteCogTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.cog = FilePaste(self.bot)
 
+    @unittest.mock.patch("bot.cogs.automod.filepaste.upload_attachments", fake_upload_attachments)
+    async def test_in_dm(self):
+        """Test that a user in a DM can send any message without it being removed."""
+        dm_user = MockUser()
+        disallowed_attachment = MockAttachment(filename="file_with_disallowed_extension.exe")
+        message = MockMessage(author=dm_user, attachments=[disallowed_attachment])
+        await self.cog.on_message(message)
+
+    @unittest.mock.patch("bot.cogs.automod.filepaste.upload_attachments", fake_upload_attachments)
+    async def test_regular_member_no_attachments(self):
+        """Test that a member without manage_messages permissions can post a message without any attachments."""
+        regular_member = MockMember()
+        regular_member.permissions_in.return_value = Permissions(manage_messages=False)
+        message = MockMessage(author=regular_member, attachments=[])
+        await self.cog.on_message(message)
+
+        message.delete.assert_not_awaited()
+
+    @unittest.mock.patch("bot.cogs.automod.filepaste.upload_attachments", fake_upload_attachments)
+    async def test_regular_member_allowed_extension(self):
+        """Test that a member without manage_messages permissions can post an attachments with allowed extension."""
+        regular_member = MockMember()
+        regular_member.permissions_in.return_value = Permissions(manage_messages=False)
+        allowed_attachment = MockAttachment(filename="file_with_disallowed_extension.png")
+        message = MockMessage(author=regular_member, attachments=[allowed_attachment])
+        await self.cog.on_message(message)
+
+        message.delete.assert_not_awaited()
+
     @unittest.mock.patch("bot.utils.paste_upload.upload_attachments", fake_upload_attachments)
     async def test_excepted_member_disallowed_extension(self):
         """Test that a member with manage_messages permissions is excepted from posting disallowed attachments."""
@@ -31,7 +60,7 @@ class FilePasteCogTests(unittest.IsolatedAsyncioTestCase):
         message = MockMessage(author=excepted_member, attachments=[disallowed_attachment])
         await self.cog.on_message(message)
 
-        message.delete.assert_not_called()
+        message.delete.assert_not_awaited()
 
     @unittest.mock.patch("bot.cogs.automod.filepaste.upload_attachments", fake_upload_attachments)
     async def test_regular_member_disallowed_extension(self):
@@ -42,7 +71,7 @@ class FilePasteCogTests(unittest.IsolatedAsyncioTestCase):
         message = MockMessage(author=regular_member, attachments=[disallowed_attachment])
         await self.cog.on_message(message)
 
-        message.delete.assert_called_once()
+        message.delete.assert_awaited_once()
 
     @unittest.mock.patch("bot.cogs.automod.filepaste.upload_attachments", fake_upload_attachments)
     async def test_regular_member_disallowed_extension_message(self):
