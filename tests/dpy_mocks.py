@@ -251,7 +251,11 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock, discord.mixins.Hashab
     """A class for creating mocked `discord.TextChannel` objects."""
     spec_set = text_channel_instance
 
-    def __init__(self, overwrites: t.Dict[t.Union[discord.Role, discord.Member], discord.PermissionOverwrite], **kwargs):
+    def __init__(
+        self,
+        overwrites: t.Optional[t.Dict[t.Union[discord.Role, discord.Member], discord.PermissionOverwrite]] = None,
+        **kwargs
+    ):
         new_kwargs = {
             "id": next(self.discord_id),
             "name": "MockedTextChannel",
