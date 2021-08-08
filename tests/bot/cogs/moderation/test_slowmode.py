@@ -21,11 +21,18 @@ class SlowmodeCogTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.slow_mode(self.cog, self.context, new_time)
         self.assertEqual(self.text_channel.slowmode_delay, new_time)
 
-    async def test_slowmode_sends_message(self):
+    async def test_slowmode_apply_sends_message(self):
         """Ensure that slow_mode command sends the expected message to the affected channel."""
-        new_time = 10  # seconds
-        await self.cog.slow_mode(self.cog, self.context, new_time)
-        self.context.send.assert_called_once_with(f"⏱️ Applied slowmode for this channel, time delay: {new_time} seconds.")
+        test_cases = (
+            (10, "⏱️ Applied slowmode for this channel, time delay: 10 seconds."),
+            (0, "💬 Slowmode removed.")
+        )
+
+        for slowmode_time, expected_message in test_cases:
+            with self.subTest(slowmode_time=slowmode_time, expected_message=expected_message):
+                await self.cog.slow_mode(self.cog, self.context, slowmode_time)
+                self.context.send.assert_called_once_with(expected_message)
+                self.context.reset_mock()
 
     async def test_slowmode_invalid_duration(self):
         """Discord only supports slowmode duration of up to 6 hours, make sure we respect that."""
