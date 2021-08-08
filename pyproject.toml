@@ -40,3 +40,8 @@ test = "pytest"
 test-cov = "pytest --cov-report= --cov"
 cov-report = "coverage report"
 cov-report-html = "coverage html"
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["bot"]
+source = ["tests"]
