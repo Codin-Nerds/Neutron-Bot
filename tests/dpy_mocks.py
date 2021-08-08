@@ -481,8 +481,7 @@ class MockContext(CustomMockMixin, unittest.mock.Mock):
             "guild": MockGuild(),
             "author": MockMember(),
             "channel": MockTextChannel(),
-            "message": MockMessage(),
-            "invoked_from_error_handler": False,
+            "message": MockMessage()
         }
         new_kwargs.update(kwargs)
         super().__init__(**new_kwargs)
