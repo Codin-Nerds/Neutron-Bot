@@ -216,7 +216,8 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColorMixin):
             "id": next(self.discord_id),
             "name": "MockedMember",
             "pending": False,
-            "bot": False
+            "bot": False,
+            "guild": MockGuild()
         }
         new_kwargs.update(kwargs)
 
