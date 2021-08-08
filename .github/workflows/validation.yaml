@@ -20,7 +20,7 @@ env:
   PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
 
 jobs:
-  validate:
+  validation:
     name: Validation
     runs-on: ubuntu-latest
 
