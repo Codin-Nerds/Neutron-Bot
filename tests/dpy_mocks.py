@@ -291,7 +291,7 @@ voice_channel_data = {
 voice_channel_instance = discord.VoiceChannel(data=voice_channel_data, guild=guild_instance, state=mock_state)
 
 
-class MockVoiceChannel:
+class MockVoiceChannel(CustomMockMixin, unittest.mock.Mock):
     """A class for creating mocked `discord.VoiceChannel` objects."""
     spec_set = voice_channel_instance
 
@@ -316,7 +316,7 @@ category_channel_data = {
 category_channel_instance = discord.CategoryChannel(data=category_channel_data, guild=guild_instance, state=mock_state)
 
 
-class MockCategoryChannel:
+class MockCategoryChannel(CustomMockMixin, unittest.mock.Mock):
     """A class for creating mocked `discord.CategoryChannel` objects."""
     spec_set = category_channel_instance
 
@@ -334,7 +334,7 @@ dm_channel_data = {"id": 1, "recipients": [user_instance]}
 dm_channel_instance = discord.DMChannel(me=user_instance, data=dm_channel_data, state=mock_state)
 
 
-class MockDMChannel:
+class MockDMChannel(CustomMockMixin, unittest.mock.Mock):
     """A class for creating mocked `discord.DMChannel` objects."""
     spec_set = dm_channel_instance
 
